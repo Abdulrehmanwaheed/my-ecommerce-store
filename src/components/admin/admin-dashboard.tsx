@@ -98,6 +98,7 @@ export function AdminDashboard({
   const [category, setCategory] = useState(defaultCategory);
   const [featured, setFeatured] = useState(false);
   const [description, setDescription] = useState('');
+  const [imagesText, setImagesText] = useState('');
   const [attributes, setAttributes] = useState<AttributeRow[]>([
     { key: '', value: '' },
   ]);
@@ -118,6 +119,7 @@ export function AdminDashboard({
     setCategory(defaultCategory);
     setFeatured(false);
     setDescription('');
+    setImagesText('');
     setAttributes([{ key: '', value: '' }]);
     setFormError(null);
     setFormSuccess(null);
@@ -162,6 +164,10 @@ export function AdminDashboard({
       if (!row.key.trim()) continue;
       attributesMap[row.key.trim()] = parseAttributeValue(row.value);
     }
+    const images = imagesText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
 
     const slug = title
       .toLowerCase()
@@ -178,6 +184,7 @@ export function AdminDashboard({
         price: priceNum,
         original_price: originalPrice ? Number(originalPrice) : null,
         stock: stockNum,
+        images,
         category_id: category,
         attributes: attributesMap,
         is_featured: featured,
@@ -435,6 +442,18 @@ export function AdminDashboard({
                   placeholder="Short selling line"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                  Image URLs (one per line)
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="https://example.com/product-1.jpg&#10;https://example.com/product-2.jpg"
+                  value={imagesText}
+                  onChange={(e) => setImagesText(e.target.value)}
+                  className="min-h-20 w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 dark:bg-input/30"
                 />
               </div>
             </div>

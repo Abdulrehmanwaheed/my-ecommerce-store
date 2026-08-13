@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
@@ -13,6 +14,7 @@ import { Button } from '@/components/ui/button';
 export function ProductCard({ product }: { product: Product }) {
   const addItem = useCartStore((s) => s.addItem);
   const openDrawer = useCartStore((s) => s.openDrawer);
+  const [imgFailed, setImgFailed] = useState(false);
 
   const discount =
     product.original_price && product.original_price > product.price
@@ -33,9 +35,19 @@ export function ProductCard({ product }: { product: Product }) {
         href={`/product/${product.slug}`}
         className="relative block aspect-square overflow-hidden bg-gradient-to-br from-muted via-background to-muted"
       >
-        <span className="grid h-full w-full place-items-center text-5xl font-bold tracking-tight text-foreground/10 transition-transform duration-300 group-hover:scale-110">
-          {product.title.charAt(0)}
-        </span>
+        {product.images[0] && !imgFailed ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={product.images[0]}
+            alt={product.title}
+            onError={() => setImgFailed(true)}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <span className="grid h-full w-full place-items-center text-5xl font-bold tracking-tight text-foreground/10 transition-transform duration-300 group-hover:scale-110">
+            {product.title.charAt(0)}
+          </span>
+        )}
         {discount && (
           <span className="absolute top-3 left-3 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
             -{discount}%
