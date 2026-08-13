@@ -59,22 +59,32 @@ export function BentoGrid({ products }: BentoGridProps) {
   return (
     <section className="grid grid-cols-1 gap-4 md:grid-cols-4 md:auto-rows-[15rem]">
       {/* Card 1 — Large 2x2 featured tech */}
-      <Link
-        href={`/product/${heroProduct.slug}`}
-        className="group relative col-span-1 row-span-1 overflow-hidden rounded-3xl border border-border/60 transition-colors md:col-span-2 md:row-span-2"
-      >
-        <ProductVisual product={heroProduct} className="h-full rounded-3xl" />
-        <div className="pointer-events-none absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-100 transition-opacity duration-300 group-hover:opacity-90 md:opacity-0 md:group-hover:opacity-90">
-          <div className="p-5 backdrop-blur-md md:bg-white/5">
-            <p className="line-clamp-2 text-sm text-white/85">
-              {heroProduct.description}
-            </p>
-            <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-white">
-              Shop Now <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </span>
+      {heroProduct ? (
+        <Link
+          href={`/product/${heroProduct.slug}`}
+          className="group relative col-span-1 row-span-1 overflow-hidden rounded-3xl border border-border/60 transition-colors md:col-span-2 md:row-span-2"
+        >
+          <ProductVisual product={heroProduct} className="h-full rounded-3xl" />
+          <div className="pointer-events-none absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-100 transition-opacity duration-300 group-hover:opacity-90 md:opacity-0 md:group-hover:opacity-90">
+            <div className="p-5 backdrop-blur-md md:bg-white/5">
+              <p className="line-clamp-2 text-sm text-white/85">
+                {heroProduct.description}
+              </p>
+              <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-white">
+                Shop Now <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              </span>
+            </div>
           </div>
+        </Link>
+      ) : (
+        <div className="col-span-1 row-span-1 flex items-center justify-center rounded-3xl border border-dashed border-border/60 bg-muted/30 p-8 text-center md:col-span-2 md:row-span-2">
+          <p className="text-sm text-muted-foreground">
+            Catalog coming soon —
+            <br />
+            add products from the admin panel.
+          </p>
         </div>
-      </Link>
+      )}
 
       {/* Card 2 — 1x1 COD pitch */}
       <div className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-border/60 bg-card p-5 transition-colors hover:border-border">
