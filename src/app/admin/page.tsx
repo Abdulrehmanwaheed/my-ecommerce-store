@@ -1,0 +1,22 @@
+import type { Metadata } from 'next';
+
+import { STORE_CONFIG } from '@/store.config';
+import { fetchAllOrders } from '@/lib/backend-demo';
+import { AdminDashboard } from '@/components/admin/admin-dashboard';
+
+export const metadata: Metadata = {
+  title: `Admin — ${STORE_CONFIG.brand.name}`,
+  description: 'Store management dashboard.',
+};
+
+export default async function AdminPage() {
+  const orders = await fetchAllOrders();
+
+  return (
+    <main className="min-h-screen bg-zinc-950 px-4 py-10 text-white sm:px-6">
+      <div className="mx-auto max-w-6xl">
+        <AdminDashboard initialOrders={orders} />
+      </div>
+    </main>
+  );
+}
