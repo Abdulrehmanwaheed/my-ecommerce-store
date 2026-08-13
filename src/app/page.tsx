@@ -3,16 +3,26 @@ import { ArrowRight, MessageCircle, Sparkles } from 'lucide-react';
 
 import { STORE_CONFIG } from '@/store.config';
 import { fetchProducts } from '@/lib/backend-demo';
+import type { Product } from '@/types/database';
 import { BentoGrid } from '@/components/storefront/BentoGrid';
 import { ProductGrid } from '@/components/storefront/product-grid';
 import { Button } from '@/components/ui/button';
+
+export const dynamic = 'force-dynamic';
 
 const whatsappUrl = `https://wa.me/${STORE_CONFIG.whatsapp.phoneNumber}?text=${encodeURIComponent(
   STORE_CONFIG.whatsapp.defaultMessage,
 )}`;
 
 export default async function HomePage() {
-  const products = await fetchProducts();
+  let products: Product[] = [];
+
+  try {
+    products = await fetchProducts();
+  } catch (error) {
+    console.error('Failed to load products on homepage:', error);
+    products = [];
+  }
 
   return (
     <main>

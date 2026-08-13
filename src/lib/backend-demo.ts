@@ -134,8 +134,11 @@ export async function fetchProducts(): Promise<Product[]> {
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
-    if (error) throw new Error(`fetchProducts failed: ${error.message}`);
-    return data as Product[];
+    if (error) {
+      console.warn('[backend-demo] Supabase fetch error (products):', error.message);
+      return [];
+    }
+    return (data ?? []) as Product[];
   }
   warnMockFallback('fetchProducts');
   return [...runtimeProducts];
@@ -149,7 +152,10 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
       .select('*')
       .eq('slug', slug)
       .maybeSingle();
-    if (error) throw new Error(`fetchProductBySlug failed: ${error.message}`);
+    if (error) {
+      console.warn('[backend-demo] Supabase fetch error (product by slug):', error.message);
+      return null;
+    }
     return (data as Product | null) ?? null;
   }
   warnMockFallback('fetchProductBySlug');
@@ -167,14 +173,20 @@ export async function fetchOrderById(
       .select('*')
       .eq('id', id)
       .maybeSingle();
-    if (orderError) throw new Error(`fetchOrderById failed: ${orderError.message}`);
+    if (orderError) {
+      console.warn('[backend-demo] Supabase fetch error (order):', orderError.message);
+      return null;
+    }
     if (!order) return null;
 
     const { data: items, error: itemsError } = await supabase
       .from('order_items')
       .select('*')
       .eq('order_id', id);
-    if (itemsError) throw new Error(`fetchOrderById items failed: ${itemsError.message}`);
+    if (itemsError) {
+      console.warn('[backend-demo] Supabase fetch error (order items):', itemsError.message);
+      return null;
+    }
 
     return { order: order as Order, items: (items ?? []) as OrderItem[] };
   }
@@ -312,7 +324,10 @@ export async function fetchAllOrders(): Promise<Order[]> {
       .from('orders')
       .select('*')
       .order('created_at', { ascending: false });
-    if (error) throw new Error(`fetchAllOrders failed: ${error.message}`);
+    if (error) {
+      console.warn('[backend-demo] Supabase fetch error (orders):', error.message);
+      return [];
+    }
     return (data ?? []) as Order[];
   }
   warnMockFallback('fetchAllOrders');
