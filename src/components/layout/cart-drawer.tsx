@@ -72,18 +72,20 @@ export function CartDrawer() {
           </div>
         ) : (
           <>
-            <div className="border-b border-border/60 px-4 py-3">
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                <span>
+            <div className="border-b border-zinc-200/80 bg-white px-4 py-3">
+              <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                <span className={remainingForFree > 0 ? '' : 'font-semibold text-emerald-600'}>
                   {remainingForFree > 0
-                    ? `Add ${formatPrice(remainingForFree)} for Free Delivery`
-                    : 'Free Delivery unlocked'}
+                    ? `Add ${formatPrice(remainingForFree)} more for FREE Shipping!`
+                    : '🎉 Free Shipping unlocked!'}
                 </span>
                 <span>{count} item{count === 1 ? '' : 's'}</span>
               </div>
-              <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted">
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-100">
                 <div
-                  className="h-full rounded-full bg-primary transition-all duration-500"
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    remainingForFree > 0 ? 'bg-zinc-900' : 'bg-emerald-600'
+                  }`}
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -157,14 +159,14 @@ export function CartDrawer() {
 
               <Button
                 size="lg"
-                className="h-10 w-full rounded-xl"
+                className="h-10 w-full rounded-xl bg-zinc-900 hover:bg-zinc-800"
                 disabled={items.length === 0}
                 onClick={() => {
                   closeDrawer();
                   router.push('/checkout');
                 }}
               >
-                Checkout
+                Proceed to Checkout
                 <ArrowRight className="size-4" />
               </Button>
             </SheetFooter>

@@ -143,3 +143,53 @@
   stroke-dashoffset: 42;
   animation: success-draw 0.35s ease-out 0.55s forwards;
 }
+
+/* Announcement bar rotation */
+.announce-item {
+  animation: announce-rotate 12s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+@keyframes announce-rotate {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  5%,
+  25% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  30%,
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Footer trust ticker marquee */
+.marquee-track {
+  animation: marquee 28s linear infinite;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Hide horizontal scrollbars on pill bars */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
