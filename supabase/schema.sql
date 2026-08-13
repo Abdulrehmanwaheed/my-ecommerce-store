@@ -146,3 +146,66 @@ ALTER TABLE customers       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_logs    ENABLE ROW LEVEL SECURITY;
+
+-- ------------------------------------------------------------
+-- RLS policies for guest checkout (anonymous browser traffic)
+--
+-- The storefront runs on the ANON key: it must be able to read the
+-- public catalog and insert its own orders. Everything else (order
+-- reads, webhooks, admin) uses the service-role admin client, which
+-- bypasses RLS entirely. No SELECT policies are granted on orders /
+-- customers / payment_logs, so anonymous users can never read other
+-- customers' data.
+-- ------------------------------------------------------------
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'products' AND policyname = 'anon_read_products'
+    ) THEN
+        CREATE POLICY anon_read_products ON products
+            FOR SELECT TO anon USING (true);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'categories' AND policyname = 'anon_read_categories'
+    ) THEN
+        CREATE POLICY anon_read_categories ON categories
+            FOR SELECT TO anon USING (true);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'customers' AND policyname = 'anon_insert_customers'
+    ) THEN
+        CREATE POLICY anon_insert_customers ON customers
+            FOR INSERT TO anon WITH CHECK (true);
+    END IF;
+
+    -- Upsert on phone_whatsapp also requires UPDATE for existing rows.
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'customers' AND policyname = 'anon_update_customers'
+    ) THEN
+        CREATE POLICY anon_update_customers ON customers
+            FOR UPDATE TO anon USING (true) WITH CHECK (true);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'orders' AND policyname = 'anon_insert_orders'
+    ) THEN
+        CREATE POLICY anon_insert_orders ON orders
+            FOR INSERT TO anon WITH CHECK (true);
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = 'order_items' AND policyname = 'anon_insert_order_items'
+    ) THEN
+        CREATE POLICY anon_insert_order_items ON order_items
+            FOR INSERT TO anon WITH CHECK (true);
+    END IF;
+END $$;
