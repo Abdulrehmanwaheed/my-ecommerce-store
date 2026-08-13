@@ -1,5 +1,6 @@
 import { STORE_CONFIG } from '../store.config';
 import type {
+  Category,
   CreateOrderInput,
   CreateProductInput,
   Customer,
@@ -311,6 +312,28 @@ export async function createOrderDemo(
 // Admin helpers
 // ------------------------------------------------------------
 
+export async function fetchAllCategories(): Promise<Category[]> {
+  if (isSupabaseConfigured()) {
+    const { createAdminClient } = await import('./supabase/admin');
+    const { data, error } = await createAdminClient()
+      .from('categories')
+      .select('id, name, slug, created_at')
+      .order('name', { ascending: true });
+    if (error) {
+      console.warn('[backend-demo] Supabase fetch error (categories):', error.message);
+      return [];
+    }
+    return (data ?? []) as Category[];
+  }
+  warnMockFallback('fetchAllCategories');
+  return DEMO_CATEGORIES.map((c) => ({
+    id: c.id,
+    name: c.name,
+    slug: c.id,
+    created_at: new Date().toISOString(),
+  }));
+}
+
 export interface AdminResult {
   success: boolean;
   error?: string;
@@ -385,7 +408,35 @@ export async function adminCreateProduct(
 
   if (isSupabaseConfigured()) {
     const { createAdminClient } = await import('./supabase/admin');
-    const { data, error } = await createAdminClient()
+    const supabase = createAdminClient();
+
+    let categoryId: string | null = null;
+    const categorySlug = input.category_id?.trim() || null;
+    if (categorySlug) {
+      const { data: category, error: catError } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('slug', categorySlug)
+        .maybeSingle();
+      if (catError) {
+        return { success: false, error: `Failed to resolve category: ${catError.message}` };
+      }
+      if (category) {
+        categoryId = category.id;
+      } else {
+        const { data: created, error: createError } = await supabase
+          .from('categories')
+          .insert({ name: categorySlug, slug: categorySlug })
+          .select('id')
+          .single();
+        if (createError) {
+          return { success: false, error: `Failed to create category: ${createError.message}` };
+        }
+        categoryId = created.id;
+      }
+    }
+
+    const { data, error } = await supabase
       .from('products')
       .insert({
         title: input.title.trim(),
@@ -395,7 +446,7 @@ export async function adminCreateProduct(
         original_price: input.original_price ?? null,
         stock: input.stock,
         images: input.images ?? [],
-        category_id: input.category_id ?? null,
+        category_id: categoryId,
         attributes: input.attributes ?? {},
         is_featured: input.is_featured ?? false,
       })

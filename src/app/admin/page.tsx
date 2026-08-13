@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import type { Metadata } from 'next';
 
 import { STORE_CONFIG } from '@/store.config';
-import { fetchAllOrders } from '@/lib/backend-demo';
+import { fetchAllCategories, fetchAllOrders } from '@/lib/backend-demo';
 import { AdminDashboard } from '@/components/admin/admin-dashboard';
 
 export const metadata: Metadata = {
@@ -12,12 +12,15 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminPage() {
-  const orders = await fetchAllOrders();
+  const [orders, categories] = await Promise.all([
+    fetchAllOrders(),
+    fetchAllCategories(),
+  ]);
 
   return (
     <main className="min-h-screen bg-zinc-950 px-4 py-10 text-white sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <AdminDashboard initialOrders={orders} />
+        <AdminDashboard initialOrders={orders} initialCategories={categories} />
       </div>
     </main>
   );

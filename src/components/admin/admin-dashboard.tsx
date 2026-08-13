@@ -17,7 +17,7 @@ import {
   createProductAction,
   updateOrderStatusAction,
 } from '@/app/actions/admin';
-import type { Order, OrderStatus, PaymentStatus } from '@/types/database';
+import type { Category, Order, OrderStatus, PaymentStatus } from '@/types/database';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -74,8 +74,15 @@ function parseAttributeValue(raw: string): unknown {
   return trimmed;
 }
 
-export function AdminDashboard({ initialOrders }: { initialOrders: Order[] }) {
+export function AdminDashboard({
+  initialOrders,
+  initialCategories,
+}: {
+  initialOrders: Order[];
+  initialCategories: Category[];
+}) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const defaultCategory = initialCategories[0]?.slug ?? '';
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [statusError, setStatusError] = useState<string | null>(null);
 
@@ -88,7 +95,7 @@ export function AdminDashboard({ initialOrders }: { initialOrders: Order[] }) {
   const [price, setPrice] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
   const [stock, setStock] = useState('');
-  const [category, setCategory] = useState('cat-tech');
+  const [category, setCategory] = useState(defaultCategory);
   const [featured, setFeatured] = useState(false);
   const [description, setDescription] = useState('');
   const [attributes, setAttributes] = useState<AttributeRow[]>([
@@ -108,7 +115,7 @@ export function AdminDashboard({ initialOrders }: { initialOrders: Order[] }) {
     setPrice('');
     setOriginalPrice('');
     setStock('');
-    setCategory('cat-tech');
+    setCategory(defaultCategory);
     setFeatured(false);
     setDescription('');
     setAttributes([{ key: '', value: '' }]);
@@ -404,13 +411,19 @@ export function AdminDashboard({ initialOrders }: { initialOrders: Order[] }) {
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                   Category
                 </label>
-                <Select value={category} onValueChange={(v) => setCategory(v ?? 'cat-tech')}>
+                <Select
+                  value={category}
+                  onValueChange={(v) => setCategory(v ?? defaultCategory)}
+                >
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue placeholder={initialCategories.length === 0 ? 'No categories yet' : undefined} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cat-tech">Smart Tech</SelectItem>
-                    <SelectItem value="cat-home">Home &amp; Utility</SelectItem>
+                    {initialCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.slug}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
