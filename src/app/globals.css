@@ -146,7 +146,7 @@
 
 /* Announcement bar rotation */
 .announce-item {
-  animation: announce-rotate 12s ease-in-out infinite;
+  animation: announce-rotate 12s ease-in-out infinite both;
   will-change: opacity, transform;
 }
 
@@ -192,4 +192,19 @@
 
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/* Floating hero product card */
+.animate-float {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }

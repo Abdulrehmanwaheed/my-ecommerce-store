@@ -6,7 +6,9 @@ import {
   Loader2,
   PackagePlus,
   Plus,
+  Search,
   ShoppingBag,
+  Star,
   Trash2,
   Wallet,
 } from 'lucide-react';
@@ -14,10 +16,18 @@ import {
 import { formatPrice } from '@/lib/format';
 import { isSupabaseConfigured } from '@/lib/backend-demo';
 import {
+  createCategoryAction,
   createProductAction,
+  deleteProductAction,
   updateOrderStatusAction,
 } from '@/app/actions/admin';
-import type { Category, Order, OrderStatus, PaymentStatus } from '@/types/database';
+import type {
+  Category,
+  Order,
+  OrderStatus,
+  PaymentStatus,
+  Product,
+} from '@/types/database';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -77,12 +87,23 @@ function parseAttributeValue(raw: string): unknown {
 export function AdminDashboard({
   initialOrders,
   initialCategories,
+  initialProducts,
 }: {
   initialOrders: Order[];
   initialCategories: Category[];
+  initialProducts: Product[];
 }) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const defaultCategory = initialCategories[0]?.slug ?? '';
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [tab, setTab] = useState<'orders' | 'catalog'>('orders');
+  const [prodSearch, setProdSearch] = useState('');
+  const [prodCategory, setProdCategory] = useState('all');
+  const [deleting, setDeleting] = useState<
+    Record<string, 'confirm' | 'busy' | undefined>
+  >({});
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const defaultCategory = categories[0]?.slug ?? '';
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [statusError, setStatusError] = useState<string | null>(null);
 
@@ -90,6 +111,12 @@ export function AdminDashboard({
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [catName, setCatName] = useState('');
+  const [catSlug, setCatSlug] = useState('');
+  const [catBusy, setCatBusy] = useState(false);
+  const [catError, setCatError] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
@@ -110,6 +137,81 @@ export function AdminDashboard({
     ).length;
     return { revenue, orders: orders.length, pendingCod };
   }, [orders]);
+
+  const categoryNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const category of categories) {
+      map.set(category.id, category.name);
+      map.set(category.slug, category.name);
+    }
+    return map;
+  }, [categories]);
+
+  const slugToId = useMemo(
+    () => new Map(categories.map((category) => [category.slug, category.id])),
+    [categories],
+  );
+
+  const filteredProducts = useMemo(() => {
+    const query = prodSearch.trim().toLowerCase();
+    const categoryId = slugToId.get(prodCategory) ?? prodCategory;
+    return products.filter((product) => {
+      if (prodCategory !== 'all' && product.category_id !== categoryId) return false;
+      if (query && !product.title.toLowerCase().includes(query)) return false;
+      return true;
+    });
+  }, [products, prodSearch, prodCategory, slugToId]);
+
+  async function handleDeleteProduct(productId: string) {
+    setDeleteError(null);
+    if (deleting[productId] === 'confirm') {
+      setDeleting((d) => ({ ...d, [productId]: 'busy' }));
+      const result = await deleteProductAction(productId);
+      if (!result.success) {
+        setDeleteError(result.error ?? 'Could not delete product.');
+        setDeleting((d) => ({ ...d, [productId]: undefined }));
+        return;
+      }
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+      setDeleting((d) => ({ ...d, [productId]: undefined }));
+    } else {
+      setDeleting((d) => ({ ...d, [productId]: 'confirm' }));
+    }
+  }
+
+  async function handleCreateCategory(e: React.FormEvent) {
+    e.preventDefault();
+    setCatError(null);
+    const name = catName.trim();
+    if (!name) {
+      setCatError('Category name is required.');
+      return;
+    }
+    setCatBusy(true);
+    try {
+      const result = await createCategoryAction(name, catSlug.trim() || undefined);
+      if (!result.success) {
+        setCatError(result.error ?? 'Could not create category.');
+        return;
+      }
+      setCategories((prev) => [
+        ...prev,
+        {
+          id: result.id ?? name,
+          name,
+          slug: catSlug.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      setCategoryModalOpen(false);
+      setCatName('');
+      setCatSlug('');
+    } catch (err) {
+      setCatError(err instanceof Error ? err.message : 'Could not create category.');
+    } finally {
+      setCatBusy(false);
+    }
+  }
 
   function resetForm() {
     setTitle('');
@@ -227,7 +329,46 @@ export function AdminDashboard({
             <PackagePlus className="size-4" />
             Add Product
           </Button>
+          <Button
+            variant="outline"
+            className="h-9 rounded-xl"
+            onClick={() => {
+              setCatError(null);
+              setCatName('');
+              setCatSlug('');
+              setCategoryModalOpen(true);
+            }}
+          >
+            <Plus className="size-4" />
+            New Category
+          </Button>
         </div>
+      </div>
+
+      {/* Section tabs */}
+      <div className="mt-8 flex w-fit items-center gap-1 rounded-2xl border border-zinc-800 bg-zinc-900 p-1">
+        <button
+          type="button"
+          onClick={() => setTab('orders')}
+          className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+            tab === 'orders'
+              ? 'bg-white text-zinc-950'
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          Orders
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('catalog')}
+          className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+            tab === 'catalog'
+              ? 'bg-white text-zinc-950'
+              : 'text-zinc-400 hover:text-white'
+          }`}
+        >
+          Catalog ({products.length})
+        </button>
       </div>
 
       {/* Metrics */}
@@ -269,7 +410,8 @@ export function AdminDashboard({
       </div>
 
       {/* Orders */}
-      <div className="mt-8 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
+      {tab === 'orders' && (
+        <div className="mt-8 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
         <div className="border-b border-zinc-800 px-5 py-4">
           <h2 className="text-sm font-semibold">Orders</h2>
           <p className="mt-0.5 text-xs text-zinc-500">
@@ -358,6 +500,228 @@ export function AdminDashboard({
           </table>
         </div>
       </div>
+      )}
+
+      {/* Catalog */}
+      {tab === 'catalog' && (
+        <div className="mt-8 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 px-5 py-4">
+            <div>
+              <h2 className="text-sm font-semibold">Products</h2>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                {filteredProducts.length} of {products.length} products shown.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-zinc-500" />
+                <input
+                  type="search"
+                  value={prodSearch}
+                  onChange={(e) => setProdSearch(e.target.value)}
+                  placeholder="Search by name…"
+                  className="h-9 w-52 rounded-xl border border-zinc-700 bg-zinc-800 py-2 pr-3 pl-8 text-xs text-zinc-200 outline-none transition-colors placeholder:text-zinc-500 focus:border-zinc-500"
+                />
+              </div>
+              <Select
+                value={prodCategory}
+                onValueChange={(v) => setProdCategory(v ?? 'all')}
+              >
+                <SelectTrigger className="h-9 w-44 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.slug}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {deleteError && (
+            <p className="border-b border-zinc-800 bg-red-500/10 px-5 py-2.5 text-xs text-red-400">
+              {deleteError}
+            </p>
+          )}
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800 text-[11px] uppercase tracking-widest text-zinc-500">
+                  <th className="px-5 py-3 font-medium">Product</th>
+                  <th className="px-5 py-3 font-medium">Category</th>
+                  <th className="px-5 py-3 font-medium">Price</th>
+                  <th className="px-5 py-3 font-medium">Stock</th>
+                  <th className="px-5 py-3 font-medium">Featured</th>
+                  <th className="px-5 py-3 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-12 text-center text-zinc-500">
+                      {products.length === 0
+                        ? 'No products yet. Add your first product above.'
+                        : 'No products match this search / category.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProducts.map((product) => (
+                    <tr
+                      key={product.id}
+                      className="border-b border-zinc-800/70 transition-colors last:border-0 hover:bg-zinc-800/40"
+                    >
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-lg bg-zinc-800 text-sm font-bold text-zinc-400">
+                            {product.images[0] ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={product.images[0]}
+                                alt=""
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              product.title.charAt(0)
+                            )}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="max-w-56 truncate font-medium text-zinc-100">
+                              {product.title}
+                            </p>
+                            <p className="max-w-56 truncate font-mono text-[10px] text-zinc-600">
+                              {product.slug}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="rounded-lg bg-zinc-800 px-2 py-1 text-xs text-zinc-300">
+                          {categoryNameById.get(product.category_id ?? '') ??
+                            'Uncategorized'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="font-semibold tabular-nums text-zinc-100">
+                          {formatPrice(product.price)}
+                        </span>
+                        {product.original_price &&
+                          product.original_price > product.price && (
+                            <span className="ml-1.5 text-xs text-zinc-600 line-through tabular-nums">
+                              {formatPrice(product.original_price)}
+                            </span>
+                          )}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span
+                          className={
+                            product.stock === 0
+                              ? 'font-semibold text-red-400'
+                              : product.stock <= 10
+                                ? 'font-semibold text-amber-400'
+                                : 'text-zinc-400'
+                          }
+                        >
+                          {product.stock}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        {product.is_featured ? (
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/15 px-2 py-1 text-xs font-medium text-emerald-400">
+                            <Star className="size-3 fill-current" />
+                            Featured
+                          </span>
+                        ) : (
+                          <span className="text-xs text-zinc-600">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        {deleting[product.id] === 'busy' ? (
+                          <Loader2 className="ml-auto size-4 animate-spin text-zinc-500" />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProduct(product.id)}
+                            className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors ${
+                              deleting[product.id] === 'confirm'
+                                ? 'bg-red-600 text-white hover:bg-red-500'
+                                : 'bg-zinc-800 text-zinc-400 hover:bg-red-600/15 hover:text-red-400'
+                            }`}
+                          >
+                            <Trash2 className="size-3.5" />
+                            {deleting[product.id] === 'confirm'
+                              ? 'Confirm Delete'
+                              : 'Delete'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* New category modal */}
+      <Dialog open={categoryModalOpen} onOpenChange={setCategoryModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Category</DialogTitle>
+            <DialogDescription>
+              Categories appear in the storefront filters instantly.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateCategory} className="grid gap-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                Category Name
+              </label>
+              <Input
+                placeholder="e.g. Gaming & Consoles"
+                value={catName}
+                onChange={(e) => {
+                  setCatName(e.target.value);
+                  if (!catSlug.trim()) {
+                    setCatSlug(
+                      e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/^-|-$/g, ''),
+                    );
+                  }
+                }}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                Slug (URL-safe, optional)
+              </label>
+              <Input
+                placeholder="cat-gaming"
+                value={catSlug}
+                onChange={(e) => setCatSlug(e.target.value)}
+              />
+            </div>
+            {catError && (
+              <p className="rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {catError}
+              </p>
+            )}
+            <DialogFooter>
+              <Button type="submit" disabled={catBusy}>
+                {catBusy ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+                Create Category
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Add product modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
@@ -423,16 +787,26 @@ export function AdminDashboard({
                   onValueChange={(v) => setCategory(v ?? defaultCategory)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={initialCategories.length === 0 ? 'No categories yet' : undefined} />
+                    <SelectValue placeholder={categories.length === 0 ? 'No categories yet' : undefined} />
                   </SelectTrigger>
                   <SelectContent>
-                    {initialCategories.map((cat) => (
+                    {categories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.slug}>
                         {cat.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => setCategoryModalOpen(true)}
+                >
+                  <Plus className="size-3.5" />
+                  New Category
+                </Button>
               </div>
               <div className="sm:col-span-2">
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">

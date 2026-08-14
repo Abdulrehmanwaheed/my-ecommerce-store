@@ -7,6 +7,7 @@ import type { Product } from '@/types/database';
 import { ProductCard } from '@/components/storefront/product-card';
 
 export interface CatalogFilter {
+  id: string;
   slug: string;
   name: string;
 }
@@ -20,8 +21,13 @@ export function ProductGrid({
   categories: CatalogFilter[];
   initialCategory?: string;
 }) {
+  const slugToId = useMemo(
+    () => new Map(categories.map((category) => [category.slug, category.id])),
+    [categories],
+  );
+
   const filters: CatalogFilter[] = useMemo(
-    () => [{ slug: 'all', name: 'All Items' }, ...categories],
+    () => [{ id: 'all', slug: 'all', name: 'All Items' }, ...categories],
     [categories],
   );
 
@@ -31,12 +37,14 @@ export function ProductGrid({
       : 'all',
   );
 
+  const activeId = slugToId.get(active) ?? active;
+
   const visible = useMemo(
     () =>
       active === 'all'
         ? products
-        : products.filter((p) => p.category_id === active),
-    [products, active],
+        : products.filter((p) => p.category_id === activeId),
+    [products, active, activeId],
   );
 
   return (

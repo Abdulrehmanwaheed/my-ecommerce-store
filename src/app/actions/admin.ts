@@ -1,7 +1,9 @@
 'use server';
 
 import {
+  adminCreateCategory,
   adminCreateProduct,
+  adminDeleteProduct,
   updateOrderStatus as demoUpdateOrderStatus,
 } from '@/lib/backend-demo';
 import type { CreateProductInput, OrderStatus } from '@/types/database';
@@ -37,6 +39,35 @@ export async function createProductAction(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Create failed.',
+    };
+  }
+}
+
+export async function createCategoryAction(
+  name: string,
+  slug?: string,
+): Promise<AdminActionResult> {
+  try {
+    return await adminCreateCategory(name, slug);
+  } catch (error) {
+    console.error('[admin] createCategory failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Create failed.',
+    };
+  }
+}
+
+export async function deleteProductAction(
+  productId: string,
+): Promise<AdminActionResult> {
+  try {
+    return await adminDeleteProduct(productId);
+  } catch (error) {
+    console.error('[admin] deleteProduct failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Delete failed.',
     };
   }
 }

@@ -117,6 +117,12 @@ let warned = false;
 // Runtime copy so mock-mode mutations (e.g. admin product creation) survive
 // within the process while DEMO_PRODUCTS stays a pristine seed.
 const runtimeProducts: Product[] = [...DEMO_PRODUCTS];
+const runtimeCategories: Category[] = DEMO_CATEGORIES.map((c) => ({
+  id: c.id,
+  name: c.name,
+  slug: c.id,
+  created_at: new Date().toISOString(),
+}));
 
 function warnMockFallback(fnName: string): void {
   if (!warned) {
@@ -326,12 +332,7 @@ export async function fetchAllCategories(): Promise<Category[]> {
     return (data ?? []) as Category[];
   }
   warnMockFallback('fetchAllCategories');
-  return DEMO_CATEGORIES.map((c) => ({
-    id: c.id,
-    name: c.name,
-    slug: c.id,
-    created_at: new Date().toISOString(),
-  }));
+  return [...runtimeCategories];
 }
 
 export interface AdminResult {
@@ -475,4 +476,65 @@ export async function adminCreateProduct(
   };
   runtimeProducts.unshift(product);
   return { success: true, id: product.id };
+}
+
+export async function adminCreateCategory(
+  name: string,
+  slug?: string,
+): Promise<AdminResult> {
+  const cleanName = name?.trim();
+  if (!cleanName) return { success: false, error: 'Category name is required.' };
+
+  const cleanSlug =
+    slug?.trim() ??
+    cleanName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (!cleanSlug) return { success: false, error: 'Invalid category slug.' };
+
+  if (isSupabaseConfigured()) {
+    const { createAdminClient } = await import('./supabase/admin');
+    const { data, error } = await createAdminClient()
+      .from('categories')
+      .insert({ name: cleanName, slug: cleanSlug })
+      .select('id')
+      .single();
+    if (error) {
+      return { success: false, error: `Failed to create category: ${error.message}` };
+    }
+    return { success: true, id: data.id };
+  }
+
+  warnMockFallback('adminCreateCategory');
+  runtimeCategories.unshift({
+    id: cleanSlug,
+    name: cleanName,
+    slug: cleanSlug,
+    created_at: new Date().toISOString(),
+  });
+  return { success: true, id: cleanSlug };
+}
+
+export async function adminDeleteProduct(
+  productId: string,
+): Promise<AdminResult> {
+  if (!productId?.trim()) {
+    return { success: false, error: 'Product id is required.' };
+  }
+
+  if (isSupabaseConfigured()) {
+    const { createAdminClient } = await import('./supabase/admin');
+    const { error } = await createAdminClient()
+      .from('products')
+      .delete()
+      .eq('id', productId);
+    if (error) {
+      return { success: false, error: `Failed to delete product: ${error.message}` };
+    }
+    return { success: true, id: productId };
+  }
+
+  warnMockFallback('adminDeleteProduct');
+  const index = runtimeProducts.findIndex((p) => p.id === productId);
+  if (index === -1) return { success: false, error: 'Product not found.' };
+  runtimeProducts.splice(index, 1);
+  return { success: true, id: productId };
 }
