@@ -5,6 +5,21 @@ import { ProductGrid } from '@/components/storefront/product-grid';
 
 export const dynamic = 'force-dynamic';
 
+function distinctCategories(
+  categories: { id: string; slug: string; name: string }[],
+): { id: string; slug: string; name: string }[] {
+  const seen = new Set<string>();
+  const distinct: { id: string; slug: string; name: string }[] = [];
+  for (const category of categories) {
+    const key = category.name.trim().toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      distinct.push(category);
+    }
+  }
+  return distinct;
+}
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -21,11 +36,13 @@ export default async function HomePage({
       fetchAllCategories(),
     ]);
     products = fetchedProducts;
-    categories = fetchedCategories.map((category) => ({
-      id: category.id,
-      slug: category.slug,
-      name: category.name,
-    }));
+    categories = distinctCategories(
+      fetchedCategories.map((category) => ({
+        id: category.id,
+        slug: category.slug,
+        name: category.name,
+      })),
+    );
   } catch (error) {
     console.error('Failed to load homepage data:', error);
   }

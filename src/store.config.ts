@@ -1,12 +1,13 @@
 import type { StoreConfig } from './types/config';
+import { site } from './config/site';
 
 export const STORE_CONFIG: StoreConfig = {
   brand: {
-    name: 'My Store',
-    tagline: 'Your trusted Pakistani online store',
+    name: site.name,
+    tagline: site.tagline,
     logoUrl: '/logo.png',
-    supportEmail: 'support@mystore.pk',
-    supportPhone: '+92 300 1234567',
+    supportEmail: 'support@awancollection.pk',
+    supportPhone: site.whatsapp.phoneDisplay,
   },
   region: {
     currencySymbol: 'Rs.',
@@ -36,8 +37,8 @@ export const STORE_CONFIG: StoreConfig = {
     ],
   },
   whatsapp: {
-    phoneNumber: '923001234567',
-    defaultMessage: 'Hello, I would like to know more about your products.',
+    phoneNumber: site.whatsapp.phoneNumber,
+    defaultMessage: site.whatsapp.defaultMessage,
   },
   gateways: {
     payfast: {

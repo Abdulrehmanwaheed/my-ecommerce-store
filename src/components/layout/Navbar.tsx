@@ -29,10 +29,15 @@ export function Navbar({ categories }: { categories: NavCategory[] }) {
             {/* Brand */}
             <Link
               href="/"
-              className="flex shrink-0 items-baseline text-lg font-bold tracking-tight text-zinc-900 transition-opacity hover:opacity-80"
+              className="flex shrink-0 flex-col leading-tight transition-opacity hover:opacity-80"
             >
-              {STORE_CONFIG.brand.name}
-              <span className="text-emerald-600">.</span>
+              <span className="flex items-baseline text-lg font-bold tracking-tight text-zinc-900">
+                {STORE_CONFIG.brand.name}
+                <span className="text-emerald-600">.</span>
+              </span>
+              <span className="hidden text-[11px] font-medium text-zinc-500 md:block">
+                {STORE_CONFIG.brand.tagline}
+              </span>
             </Link>
 
             {/* Search — desktop */}

@@ -13,6 +13,19 @@ export const metadata: Metadata = {
   description: STORE_CONFIG.brand.tagline,
 };
 
+function distinctCategories(categories: NavCategory[]): NavCategory[] {
+  const seen = new Set<string>();
+  const distinct: NavCategory[] = [];
+  for (const category of categories) {
+    const key = category.name.trim().toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      distinct.push(category);
+    }
+  }
+  return distinct;
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -21,10 +34,12 @@ export default async function RootLayout({
   let categories: NavCategory[] = [];
   try {
     const fetched = await fetchAllCategories();
-    categories = fetched.map((category) => ({
-      slug: category.slug,
-      name: category.name,
-    }));
+    categories = distinctCategories(
+      fetched.map((category) => ({
+        slug: category.slug,
+        name: category.name,
+      })),
+    );
   } catch (error) {
     console.error('Failed to load categories for layout:', error);
   }

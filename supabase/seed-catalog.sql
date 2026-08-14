@@ -6,7 +6,7 @@
 -- ============================================================
 
 -- ------------------------------------------------------------
--- 1. CATEGORIES (upsert by slug)
+-- 1. CATEGORIES (upsert by slug)`
 -- ------------------------------------------------------------
 INSERT INTO categories (name, slug) VALUES
     ('Smartphones & Tablets', 'cat-mobile'),

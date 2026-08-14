@@ -105,16 +105,16 @@ export function Hero({ products }: { products: Product[] }) {
           <div className="lg:col-span-6">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
               <Zap className="size-3.5" />
-              Top Featured Gear 2026
+              Delivery All Over Pakistan (COD &amp; Non-COD Available)
             </span>
 
             <h1 className="mt-6 max-w-2xl text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
-              Discover Premium Tech &amp; Lifestyle Essentials
+              {STORE_CONFIG.brand.name} — Quality You Trust, Style You Desire
             </h1>
 
             <p className="mt-5 max-w-xl text-sm leading-relaxed text-white/60 sm:text-base">
-              Fast Cash on Delivery across Pakistan | 100% Guaranteed
-              Authentic.
+              Shop Footwear, Men&apos;s &amp; Kids Wear, Fancy Dresses, Bags,
+              Jewelry, Cosmetics &amp; Household Items.
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -123,7 +123,7 @@ export function Hero({ products }: { products: Product[] }) {
                 className="h-12 rounded-xl bg-white px-7 text-base font-semibold text-zinc-950 hover:bg-zinc-100"
                 render={<Link href="#catalog" />}
               >
-                Explore Catalog
+                Explore All Collections
                 <ArrowRight className="size-4" />
               </Button>
               <Button
@@ -134,7 +134,7 @@ export function Hero({ products }: { products: Product[] }) {
                 }
               >
                 <MessageCircle className="size-4" />
-                Chat on WhatsApp
+                Order via WhatsApp ({STORE_CONFIG.brand.supportPhone})
               </Button>
             </div>
           </div>
