@@ -79,7 +79,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-[color:var(--bg-main)] text-foreground antialiased;
   }
 }
 
@@ -206,5 +206,88 @@
   }
   50% {
     transform: translateY(-10px);
+  }
+}
+
+:root {
+  /* Dynamic Interactive Palette (Warm Gold & Rich Velvet Accent) */
+  --bg-main: #faf7f2;
+  --bg-card: #ffffff;
+  --bg-dark-accent: #1c1917;
+
+  --primary: #d4af37;
+  --primary-hover: #b59121;
+  --accent-emerald: #059669;
+  --accent-rose: #e11d48;
+
+  --border-glow: rgba(212, 175, 55, 0.3);
+}
+
+/* Glassmorphism Card Effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+/* Smooth Interactive Micro-Animations */
+.hover-lift {
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(212, 175, 55, 0.15);
+}
+
+/* Instagram-style story ring */
+.story-ring {
+  background: conic-gradient(
+    from 180deg,
+    var(--primary),
+    #f59e0b,
+    var(--accent-rose),
+    var(--accent-emerald),
+    var(--primary)
+  );
+  padding: 3px;
+  border-radius: 9999px;
+}
+
+.story-ring:hover {
+  animation: story-spin 0.9s linear infinite;
+}
+
+@keyframes story-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.story-bounce {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.story-bounce:hover {
+  transform: translateY(-4px);
+}
+
+/* Smooth grid fade on category switch */
+.fade-in-up {
+  animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

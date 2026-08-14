@@ -1,7 +1,7 @@
 import { fetchAllCategories, fetchProducts } from '@/lib/backend-demo';
 import type { Product } from '@/types/database';
 import { Hero } from '@/components/storefront/Hero';
-import { ProductGrid } from '@/components/storefront/product-grid';
+import { CatalogSection } from '@/components/storefront/catalog-section';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,15 +50,11 @@ export default async function HomePage({
   return (
     <main>
       <Hero products={products} />
-
-      {/* Catalog */}
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
-        <ProductGrid
-          products={products}
-          categories={categories}
-          initialCategory={cat}
-        />
-      </section>
+      <CatalogSection
+        products={products}
+        categories={categories}
+        initialCategory={cat}
+      />
     </main>
   );
 }

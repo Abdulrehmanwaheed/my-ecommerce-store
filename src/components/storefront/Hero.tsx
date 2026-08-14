@@ -9,6 +9,7 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { site } from '@/config/site';
 import { STORE_CONFIG } from '@/store.config';
 import { formatPrice } from '@/lib/format';
 import type { Product } from '@/types/database';
@@ -20,7 +21,7 @@ const TRUST_ITEMS = [
   { icon: RotateCcw, label: '7-Day Hassle-Free Returns' },
 ];
 
-interface ShowcaseItem {
+interface StackItem {
   id: string;
   slug: string;
   title: string;
@@ -29,41 +30,45 @@ interface ShowcaseItem {
   images: string[];
 }
 
-const FALLBACK_SHOWCASE: ShowcaseItem[] = [
+const FALLBACK_STACK: StackItem[] = [
   {
-    id: 'fb-sonicx',
-    slug: 'sonicx-pro-anc',
-    title: 'SonicX Pro ANC',
-    price: 4999,
-    original_price: 7690,
-    images: ['https://picsum.photos/seed/sonicx-pro-anc/900/900'],
+    id: 'fb-dress',
+    slug: 'ladies-fancy-dress',
+    title: 'Ladies Fancy Dress',
+    price: 3499,
+    original_price: 4999,
+    images: ['https://picsum.photos/seed/ladies-fancy-dress/900/900'],
   },
   {
-    id: 'fb-aerofit',
-    slug: 'aerofit-series-7',
-    title: 'AeroFit Series 7',
-    price: 8499,
-    original_price: null,
-    images: ['https://picsum.photos/seed/aerofit-series-7/900/900'],
+    id: 'fb-bag',
+    slug: 'womens-bag',
+    title: "Women's Bag",
+    price: 2499,
+    original_price: 3499,
+    images: ['https://picsum.photos/seed/womens-bag/900/900'],
   },
   {
-    id: 'fb-tehzeeb',
-    slug: 'tehzeeb-hafi-collection',
-    title: 'Tehzeeb Hafi Collection',
-    price: 1499,
+    id: 'fb-watch',
+    slug: 'watch',
+    title: 'Watch',
+    price: 1899,
     original_price: null,
-    images: ['https://picsum.photos/seed/tehzeeb-hafi-collection/900/900'],
+    images: ['https://picsum.photos/seed/watch/900/900'],
   },
 ];
 
-function buildShowcase(products: Product[]): ShowcaseItem[] {
-  if (products.length === 0) return FALLBACK_SHOWCASE;
+function buildStack(products: Product[]): StackItem[] {
+  if (products.length === 0) return FALLBACK_STACK;
 
   const featured = products.filter((p) => p.is_featured);
   const picked: (Product | undefined)[] = [
     featured[0] ?? products[0],
     featured[1] ?? products.find((p) => p.id !== (featured[0] ?? products[0])?.id) ?? products[1],
-    products.find((p) => p.id !== (featured[0] ?? products[0])?.id && p.id !== products[1]?.id) ?? undefined,
+    products.find(
+      (p) =>
+        p.id !== (featured[0] ?? products[0])?.id &&
+        p.id !== (featured[1] ?? products[1])?.id,
+    ) ?? products[2],
   ];
 
   return picked
@@ -79,37 +84,46 @@ function buildShowcase(products: Product[]): ShowcaseItem[] {
     }));
 }
 
+function discountOf(item: StackItem): number {
+  return item.original_price && item.original_price > item.price
+    ? Math.round((1 - item.price / item.original_price) * 100)
+    : 0;
+}
+
 export function Hero({ products }: { products: Product[] }) {
   const whatsappUrl = `https://wa.me/${STORE_CONFIG.whatsapp.phoneNumber}?text=${encodeURIComponent(
     STORE_CONFIG.whatsapp.defaultMessage,
   )}`;
 
-  const showcase = buildShowcase(products);
-  const [head, ...rest] = showcase;
-  const [second, third] = rest;
+  const stack = buildStack(products);
+  const [head, second, third] = stack;
 
-  const headDiscount =
-    head.original_price && head.original_price > head.price
-      ? Math.round((1 - head.price / head.original_price) * 100)
-      : 35;
+  const cardTilt = [
+    '-rotate-6 -translate-x-3 lg:-translate-x-8',
+    'rotate-0 z-10',
+    'rotate-6 translate-x-3 lg:translate-x-8',
+  ];
 
   return (
     <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
-      <div className="overflow-hidden rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-950 via-zinc-900 to-emerald-950 text-white shadow-2xl shadow-zinc-900/30">
-        {/* Ambient glow spheres */}
-        <div className="pointer-events-none absolute -top-10 -right-10 size-96 rounded-full bg-emerald-500/15 blur-3xl" />
-        <div className="hero-blob pointer-events-none absolute -bottom-24 -left-16 size-96 rounded-full bg-emerald-500/10 blur-3xl" />
+      <div className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-950 via-zinc-900 to-emerald-950 text-white shadow-2xl shadow-zinc-900/30">
+        {/* Ambient glows */}
+        <div className="pointer-events-none absolute -top-10 -right-10 size-96 rounded-full bg-[color:var(--accent-emerald)]/15 blur-3xl" />
+        <div className="hero-blob pointer-events-none absolute -bottom-24 -left-16 size-96 rounded-full bg-[color:var(--primary)]/10 blur-3xl" />
 
-        <div className="relative grid grid-cols-1 items-center gap-10 p-8 md:p-12 lg:grid-cols-12 lg:gap-12">
-          {/* Left — copy (6 cols) */}
-          <div className="lg:col-span-6">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+        <div className="relative grid grid-cols-1 items-center gap-12 p-8 md:p-12 lg:grid-cols-12">
+          {/* Left — welcome banner (7 cols) */}
+          <div className="lg:col-span-7">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--accent-emerald)]/40 bg-[color:var(--accent-emerald)]/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-400 uppercase tracking-wider shadow-[0_0_24px_rgba(5,150,105,0.35)]">
               <Zap className="size-3.5" />
-              Delivery All Over Pakistan (COD &amp; Non-COD Available)
+              All Pakistan COD Available
             </span>
 
             <h1 className="mt-6 max-w-2xl text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
-              {STORE_CONFIG.brand.name} — Quality You Trust, Style You Desire
+              {site.name} — Quality You Trust
+              <span className="mt-2 block text-2xl font-semibold text-white/60 sm:text-3xl">
+                Style You Desire
+              </span>
             </h1>
 
             <p className="mt-5 max-w-xl text-sm leading-relaxed text-white/60 sm:text-base">
@@ -120,126 +134,91 @@ export function Hero({ products }: { products: Product[] }) {
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Button
                 size="lg"
-                className="h-12 rounded-xl bg-white px-7 text-base font-semibold text-zinc-950 hover:bg-zinc-100"
+                className="h-12 rounded-xl bg-[color:var(--primary)] px-7 text-base font-semibold text-zinc-950 shadow-lg shadow-[color:var(--primary)]/25 hover:bg-[color:var(--primary-hover)] hover:text-zinc-950"
                 render={<Link href="#catalog" />}
               >
-                Explore All Collections
+                Explore Catalog
                 <ArrowRight className="size-4" />
               </Button>
               <Button
                 size="lg"
-                className="h-12 rounded-xl border-emerald-600/40 bg-emerald-600 px-7 text-base font-semibold text-white hover:bg-emerald-500 hover:text-white"
+                className="h-12 rounded-xl border-emerald-600/40 bg-[color:var(--accent-emerald)] px-7 text-base font-semibold text-white hover:bg-emerald-700 hover:text-white"
                 render={
                   <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" />
                 }
               >
                 <MessageCircle className="size-4" />
-                Order via WhatsApp ({STORE_CONFIG.brand.supportPhone})
+                Instant WhatsApp Order
               </Button>
+            </div>
+
+            {/* Trust ticks */}
+            <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-medium text-white/60">
+              {TRUST_ITEMS.map((item) => (
+                <span key={item.label} className="flex items-center gap-2">
+                  <item.icon className="size-3.5 text-[color:var(--primary)]" />
+                  {item.label}
+                </span>
+              ))}
             </div>
           </div>
 
-          {/* Right — multi-product showcase (6 cols) */}
-          {head && (
-            <div className="grid gap-4 lg:col-span-6">
-              {/* Top featured card */}
-              <Link
-                href={`/product/${head.slug}`}
-                className="group relative overflow-hidden rounded-3xl border border-zinc-700/50 bg-zinc-900/80 p-3 shadow-xl backdrop-blur-md transition-all duration-300 hover:scale-[1.02]"
-              >
-                <div className="relative aspect-[16/9] overflow-hidden rounded-2xl">
-                  {head.images[0] ? (
+          {/* Right — 3D layered card stack (5 cols) */}
+          <div className="relative mx-auto h-[420px] w-full max-w-sm sm:h-[460px] lg:col-span-5">
+            {[head, second, third].map((item, index) =>
+              item ? (
+                <Link
+                  key={item.id}
+                  href={`/product/${item.slug}`}
+                  className={`hover-lift group absolute inset-x-0 top-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-white/15 bg-[color:var(--bg-card)] shadow-2xl shadow-black/40 ${cardTilt[index]} ${
+                    index === 1
+                      ? 'z-10 hover:z-30'
+                      : 'z-0 opacity-80 hover:z-30 hover:opacity-100'
+                  }`}
+                  style={{ height: index === 1 ? '78%' : '64%' }}
+                >
+                  {item.images[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={head.images[0]}
-                      alt={head.title}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      src={item.images[0]}
+                      alt={item.title}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                   ) : (
-                    <span className="grid h-full w-full place-items-center text-6xl font-bold tracking-tight text-white/15">
-                      {head.title.charAt(0)}
+                    <span className="grid h-full w-full place-items-center text-6xl font-bold text-zinc-300">
+                      {item.title.charAt(0)}
                     </span>
                   )}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-zinc-950/10 to-transparent" />
-                  <span className="absolute -left-1 top-4 -rotate-3 rounded-r-lg bg-red-600 px-3 py-1.5 text-[11px] font-bold text-white shadow-lg shadow-red-600/40">
-                    -{headDiscount}% OFF
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-zinc-950/70 via-transparent to-transparent" />
+
+                  {discountOf(item) > 0 && (
+                    <span className="absolute top-3 right-3 rounded-full bg-[color:var(--accent-emerald)] px-2.5 py-1 text-[11px] font-bold text-white shadow-lg">
+                      -{discountOf(item)}% OFF
+                    </span>
+                  )}
+                  <span className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-zinc-950/50 px-2 py-1 text-[11px] font-semibold text-amber-400 backdrop-blur">
+                    <Star className="size-3 fill-current" />
+                    4.9
                   </span>
-                </div>
-                <div className="flex items-end justify-between gap-3 px-2 pt-3.5 pb-1">
-                  <div>
-                    <p className="text-lg font-bold tracking-tight">
-                      {head.title}
-                    </p>
+
+                  <div className="absolute inset-x-0 bottom-0 p-4">
+                    <p className="text-sm font-bold text-white">{item.title}</p>
                     <p className="mt-1 flex items-baseline gap-2">
-                      <span className="font-semibold text-emerald-400 tabular-nums">
-                        {formatPrice(head.price)}
+                      <span className="font-bold text-[color:var(--primary)] tabular-nums">
+                        {formatPrice(item.price)}
                       </span>
-                      {head.original_price &&
-                        head.original_price > head.price && (
-                          <span className="text-xs text-white/40 line-through tabular-nums">
-                            {formatPrice(head.original_price)}
+                      {item.original_price &&
+                        item.original_price > item.price && (
+                          <span className="text-xs text-white/50 line-through tabular-nums">
+                            {formatPrice(item.original_price)}
                           </span>
                         )}
                     </p>
                   </div>
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-amber-400 backdrop-blur">
-                    <Star className="size-3 fill-current" />
-                    4.9 · 214
-                  </span>
-                </div>
-              </Link>
-
-              {/* Secondary + mini cards */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {(second ? [second, third ?? second] : []).map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/product/${item.slug}`}
-                    className="group flex items-center gap-3 rounded-2xl border border-zinc-700/50 bg-zinc-900/80 p-3 shadow-xl backdrop-blur-md transition-all duration-300 hover:scale-[1.03]"
-                  >
-                    <span className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-xl bg-zinc-800">
-                      {item.images[0] ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={item.images[0]}
-                          alt={item.title}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                      ) : (
-                        <span className="text-2xl font-bold text-white/20">
-                          {item.title.charAt(0)}
-                        </span>
-                      )}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold">
-                        {item.title}
-                      </span>
-                      <span className="mt-0.5 block font-semibold text-emerald-400 tabular-nums">
-                        {formatPrice(item.price)}
-                      </span>
-                      <span className="mt-0.5 block text-[11px] text-white/40">
-                        ★ 4.9 · COD available
-                      </span>
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Trust bar */}
-        <div className="relative grid grid-cols-1 divide-y divide-white/10 border-t border-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          {TRUST_ITEMS.map((item) => (
-            <div
-              key={item.label}
-              className="flex items-center justify-center gap-2.5 px-4 py-4 text-xs font-medium text-white/70 sm:text-sm"
-            >
-              <item.icon className="size-4 shrink-0 text-emerald-500" />
-              {item.label}
-            </div>
-          ))}
+                </Link>
+              ) : null,
+            )}
+          </div>
         </div>
       </div>
     </section>
