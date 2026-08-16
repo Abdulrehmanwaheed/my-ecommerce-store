@@ -129,6 +129,72 @@ async function main(): Promise<void> {
   });
   assert(invalidResult.success === false, 'Unknown product rejected');
 
+  // --- Customization flow ---
+  const bag = await fetchProductBySlug('handmade-leather-bag');
+  assert(
+    bag?.allow_customization === true && bag.custom_price === 7200,
+    'Customizable product exposes allow_customization + custom_price',
+  );
+
+  const customResult = await createOrderDemo({
+    customer_name: 'Hina Malik',
+    phone_whatsapp: '03331234567',
+    city: 'Islamabad',
+    address: 'House 2, F-10',
+    payment_method: 'COD',
+    items: [
+      {
+        product_id: 'demo-prod-006',
+        quantity: 2,
+        is_customized: true,
+        custom_notes: 'Embroider initials HM, dark brown leather',
+        custom_images: [
+          'https://example.com/ref1.jpg',
+          'https://example.com/ref2.jpg',
+        ],
+      },
+    ],
+  });
+  assert(customResult.success === true, 'Customized order placement succeeds');
+
+  const customFetched = await fetchOrderById(customResult.orderId!);
+  const customItem = customFetched?.items[0];
+  assert(customItem?.is_customized === true, 'Order item stores is_customized: true');
+  assert(
+    customItem?.custom_notes === 'Embroider initials HM, dark brown leather',
+    'Order item stores custom_notes',
+  );
+  assert(
+    customItem?.custom_images?.length === 2 &&
+      customItem.custom_images[0] === 'https://example.com/ref1.jpg',
+    'Order item stores custom_images (text[])',
+  );
+  assert(
+    customItem?.unit_price === 7200,
+    `Customized item priced at custom_price (unit = ${customItem?.unit_price})`,
+  );
+  assert(
+    customFetched?.order.total_amount === 7200 * 2,
+    'Customized order total uses custom_price',
+  );
+
+  const rejectedCustom = await createOrderDemo({
+    customer_name: 'Test',
+    phone_whatsapp: '03000000000',
+    payment_method: 'COD',
+    items: [
+      {
+        product_id: 'demo-prod-001',
+        quantity: 1,
+        is_customized: true,
+      },
+    ],
+  });
+  assert(
+    rejectedCustom.success === false,
+    'Customized order rejected for non-customizable product',
+  );
+
   console.log('\nALL MOCK BACKEND CHECKS PASSED.');
 }
 

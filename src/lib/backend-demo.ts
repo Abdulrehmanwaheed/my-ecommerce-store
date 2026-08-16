@@ -9,6 +9,7 @@ import type {
   OrderStatus,
   Product,
 } from '../types/database';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export function isSupabaseConfigured(): boolean {
   return Boolean(
@@ -34,6 +35,8 @@ export const DEMO_PRODUCTS: Product[] = [
     category_id: 'cat-tech',
     attributes: { warranty: '1 Year', color: 'Black', batteryLife: '6 hours' },
     is_featured: true,
+    allow_customization: false,
+    custom_price: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -48,6 +51,8 @@ export const DEMO_PRODUCTS: Product[] = [
     category_id: 'cat-tech',
     attributes: { warranty: '1 Year', display: 'AMOLED', waterResistant: 'IP68' },
     is_featured: true,
+    allow_customization: false,
+    custom_price: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -62,6 +67,8 @@ export const DEMO_PRODUCTS: Product[] = [
     category_id: 'cat-tech',
     attributes: { warranty: '6 Months', colors: ['Black', 'Blue'], connectivity: 'Bluetooth 5.3' },
     is_featured: false,
+    allow_customization: false,
+    custom_price: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -76,6 +83,8 @@ export const DEMO_PRODUCTS: Product[] = [
     category_id: 'cat-home',
     attributes: { capacity: '5L', wattage: '1800W', presets: 8 },
     is_featured: true,
+    allow_customization: false,
+    custom_price: null,
     created_at: new Date().toISOString(),
   },
   {
@@ -90,10 +99,12 @@ export const DEMO_PRODUCTS: Product[] = [
     category_id: 'cat-home',
     attributes: { capacity: '1.5L', wattage: '1500W', autoShutoff: true },
     is_featured: false,
+    allow_customization: false,
+    custom_price: null,
     created_at: new Date().toISOString(),
   },
   {
-    id: 'demo-prod-006',
+id: 'demo-prod-006',
     title: 'Handmade Leather Bag',
     slug: 'handmade-leather-bag',
     description: 'Handcrafted genuine leather tote bag.',
@@ -104,6 +115,8 @@ export const DEMO_PRODUCTS: Product[] = [
     category_id: 'cat-home',
     attributes: { material: 'Leather', color: 'Brown', capacity: '15L' },
     is_featured: false,
+    allow_customization: true,
+    custom_price: 7200,
     created_at: new Date().toISOString(),
   },
 ];
@@ -234,7 +247,7 @@ export async function createOrderDemo(
     return { success: false, error: 'Online card payment is currently disabled.' };
   }
 
-  let subtotal = 0;
+let subtotal = 0;
   const items: OrderItem[] = [];
 
   for (const item of input.items) {
@@ -243,13 +256,26 @@ export async function createOrderDemo(
     if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
       return { success: false, error: `Invalid quantity for product: ${product.title}` };
     }
-    subtotal += product.price * item.quantity;
+    const isCustomized = item.is_customized === true;
+    if (isCustomized && !product.allow_customization) {
+      return {
+        success: false,
+        error: `"${product.title}" does not support customization.`,
+      };
+    }
+    const unitPrice = isCustomized
+      ? (product.custom_price ?? product.price)
+      : product.price;
+    subtotal += unitPrice * item.quantity;
     items.push({
       id: crypto.randomUUID(),
       order_id: '',
       product_id: product.id,
       quantity: item.quantity,
-      unit_price: product.price,
+      unit_price: unitPrice,
+      is_customized: isCustomized,
+      custom_notes: isCustomized ? (item.custom_notes ?? null) : null,
+      custom_images: isCustomized ? (item.custom_images ?? []) : [],
     });
   }
 
@@ -341,6 +367,32 @@ export interface AdminResult {
   id?: string;
 }
 
+async function resolveCategoryId(
+  supabase: SupabaseClient,
+  categorySlug: string | null,
+): Promise<string | null | Error> {
+  const cleanSlug = categorySlug?.trim() || null;
+  if (!cleanSlug) return null;
+  const { data: category, error: catError } = await supabase
+    .from('categories')
+    .select('id')
+    .eq('slug', cleanSlug)
+    .maybeSingle();
+  if (catError) {
+    return new Error(`Failed to resolve category: ${catError.message}`);
+  }
+  if (category) return category.id;
+  const { data: created, error: createError } = await supabase
+    .from('categories')
+    .insert({ name: cleanSlug, slug: cleanSlug })
+    .select('id')
+    .single();
+  if (createError) {
+    return new Error(`Failed to create category: ${createError.message}`);
+  }
+  return created.id;
+}
+
 export async function fetchAllOrders(): Promise<Order[]> {
   if (isSupabaseConfigured()) {
     const { createAdminClient } = await import('./supabase/admin');
@@ -356,6 +408,25 @@ export async function fetchAllOrders(): Promise<Order[]> {
   }
   warnMockFallback('fetchAllOrders');
   return [...mockOrders].sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function fetchAllOrderItems(): Promise<OrderItem[]> {
+  if (isSupabaseConfigured()) {
+    const { createAdminClient } = await import('./supabase/admin');
+    const { data, error } = await createAdminClient()
+      .from('order_items')
+      .select('*');
+    if (error) {
+      console.warn(
+        '[backend-demo] Supabase fetch error (order items):',
+        error.message,
+      );
+      return [];
+    }
+    return (data ?? []) as OrderItem[];
+  }
+  warnMockFallback('fetchAllOrderItems');
+  return [...mockOrderItems];
 }
 
 const VALID_ORDER_STATUSES: OrderStatus[] = [
@@ -411,30 +482,9 @@ export async function adminCreateProduct(
     const { createAdminClient } = await import('./supabase/admin');
     const supabase = createAdminClient();
 
-    let categoryId: string | null = null;
-    const categorySlug = input.category_id?.trim() || null;
-    if (categorySlug) {
-      const { data: category, error: catError } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('slug', categorySlug)
-        .maybeSingle();
-      if (catError) {
-        return { success: false, error: `Failed to resolve category: ${catError.message}` };
-      }
-      if (category) {
-        categoryId = category.id;
-      } else {
-        const { data: created, error: createError } = await supabase
-          .from('categories')
-          .insert({ name: categorySlug, slug: categorySlug })
-          .select('id')
-          .single();
-        if (createError) {
-          return { success: false, error: `Failed to create category: ${createError.message}` };
-        }
-        categoryId = created.id;
-      }
+    const categoryId = await resolveCategoryId(supabase, input.category_id ?? null);
+    if (categoryId instanceof Error) {
+      return { success: false, error: categoryId.message };
     }
 
     const { data, error } = await supabase
@@ -450,6 +500,8 @@ export async function adminCreateProduct(
         category_id: categoryId,
         attributes: input.attributes ?? {},
         is_featured: input.is_featured ?? false,
+        allow_customization: input.allow_customization ?? false,
+        custom_price: input.custom_price ?? null,
       })
       .select('id')
       .single();
@@ -472,10 +524,82 @@ export async function adminCreateProduct(
     category_id: input.category_id ?? null,
     attributes: input.attributes ?? {},
     is_featured: input.is_featured ?? false,
+    allow_customization: input.allow_customization ?? false,
+    custom_price: input.custom_price ?? null,
     created_at: new Date().toISOString(),
   };
   runtimeProducts.unshift(product);
   return { success: true, id: product.id };
+}
+
+export async function adminUpdateProduct(
+  productId: string,
+  input: CreateProductInput,
+): Promise<AdminResult> {
+  if (!productId?.trim()) return { success: false, error: 'Product id is required.' };
+  if (!input.title?.trim()) return { success: false, error: 'Title is required.' };
+  if (!input.slug?.trim()) return { success: false, error: 'Slug is required.' };
+  if (input.price == null || input.price < 0) {
+    return { success: false, error: 'Valid price is required.' };
+  }
+  if (input.stock == null || input.stock < 0) {
+    return { success: false, error: 'Valid stock is required.' };
+  }
+
+  if (isSupabaseConfigured()) {
+    const { createAdminClient } = await import('./supabase/admin');
+    const supabase = createAdminClient();
+
+    const categoryId = await resolveCategoryId(supabase, input.category_id ?? null);
+    if (categoryId instanceof Error) {
+      return { success: false, error: categoryId.message };
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .update({
+        title: input.title.trim(),
+        slug: input.slug.trim(),
+        description: input.description ?? null,
+        price: input.price,
+        original_price: input.original_price ?? null,
+        stock: input.stock,
+        images: input.images ?? [],
+        category_id: categoryId,
+        attributes: input.attributes ?? {},
+        is_featured: input.is_featured ?? false,
+        allow_customization: input.allow_customization ?? false,
+        custom_price: input.custom_price ?? null,
+      })
+      .eq('id', productId)
+      .select('id')
+      .maybeSingle();
+    if (error) {
+      return { success: false, error: `Failed to update product: ${error.message}` };
+    }
+    if (!data) return { success: false, error: 'Product not found.' };
+    return { success: true, id: data.id };
+  }
+
+  warnMockFallback('adminUpdateProduct');
+  const index = runtimeProducts.findIndex((p) => p.id === productId);
+  if (index === -1) return { success: false, error: 'Product not found.' };
+  runtimeProducts[index] = {
+    ...runtimeProducts[index],
+    title: input.title.trim(),
+    slug: input.slug.trim(),
+    description: input.description ?? null,
+    price: input.price,
+    original_price: input.original_price ?? null,
+    stock: input.stock,
+    images: input.images ?? [],
+    category_id: input.category_id ?? null,
+    attributes: input.attributes ?? {},
+    is_featured: input.is_featured ?? false,
+    allow_customization: input.allow_customization ?? false,
+    custom_price: input.custom_price ?? null,
+  };
+  return { success: true, id: productId };
 }
 
 export async function adminCreateCategory(

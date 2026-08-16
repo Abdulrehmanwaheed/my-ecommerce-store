@@ -1,11 +1,22 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Minus, Plus, ShoppingBag, Store, Trash2 } from 'lucide-react';
+import {
+  ArrowRight,
+  ImageIcon,
+  MessageCircle,
+  Minus,
+  Plus,
+  ShoppingBag,
+  Sparkles,
+  Store,
+  Trash2,
+} from 'lucide-react';
 
 import { STORE_CONFIG } from '@/store.config';
 import {
   selectSubtotal,
+  unitPriceOf,
   useCartStore,
   selectCartCount,
 } from '@/lib/cart-store';
@@ -29,7 +40,6 @@ export function CartDrawer() {
   const openDrawer = useCartStore((s) => s.openDrawer);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
-  const clearCart = useCartStore((s) => s.clearCart);
 
   const count = useCartStore(selectCartCount);
   const subtotal = useCartStore(selectSubtotal);
@@ -37,6 +47,33 @@ export function CartDrawer() {
   const { freeShippingThreshold } = STORE_CONFIG.shipping;
   const remainingForFree = freeShippingThreshold - subtotal;
   const progress = Math.min(100, (subtotal / freeShippingThreshold) * 100);
+
+  const whatsappOrderUrl = `https://wa.me/${
+    STORE_CONFIG.whatsapp.phoneNumber
+  }?text=${encodeURIComponent(
+    `Hi ${STORE_CONFIG.brand.name}! I want to confirm my order:\n\n${items
+      .map((item) => {
+        const unit = unitPriceOf(item);
+        const lines = [
+          `• ${item.quantity} × ${item.product.title} — ${formatPrice(unit * item.quantity)}`,
+        ];
+        if (item.isCustomized) {
+          lines.push(`   ✨ CUSTOMIZED (${formatPrice(unit)} each)`);
+          if (item.customNotes) {
+            lines.push(`   📝 Instructions: ${item.customNotes}`);
+          }
+          if (item.customImages?.length) {
+            lines.push(
+              `   🖼️ Reference photos: ${item.customImages.join(', ')}`,
+            );
+          }
+        }
+        return lines.join('\n');
+      })
+      .join('\n\n')}\n\nTotal: ${formatPrice(
+      subtotal,
+    )}${remainingForFree > 0 ? ` + ${formatPrice(STORE_CONFIG.shipping.flatRateFee)} shipping` : ' (Free Shipping)'}`,
+  )}`;
 
   return (
     <Sheet
@@ -92,61 +129,87 @@ export function CartDrawer() {
             </div>
 
             <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-              {items.map(({ product, quantity }) => (
-                <div
-                  key={product.id}
-                  className="flex gap-3 rounded-xl border border-border/60 p-2.5"
-                >
-                  <div className="grid size-16 shrink-0 place-items-center rounded-lg bg-muted">
-                    <Store className="size-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex flex-1 flex-col">
-                    <p className="text-sm font-medium leading-tight">
-                      {product.title}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {formatPrice(product.price)}
-                    </p>
-                    <div className="mt-auto flex items-center justify-between pt-1.5">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => updateQuantity(product.id, quantity - 1)}
-                          aria-label="Decrease quantity"
-                        >
-                          <Minus />
-                        </Button>
-                        <span className="w-6 text-center text-sm tabular-nums">
-                          {quantity}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => updateQuantity(product.id, quantity + 1)}
-                          aria-label="Increase quantity"
-                        >
-                          <Plus />
-                        </Button>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium tabular-nums">
-                          {formatPrice(product.price * quantity)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => removeItem(product.id)}
-                          aria-label="Remove item"
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 />
-                        </Button>
+              {items.map((item) => {
+                const unit = unitPriceOf(item);
+                return (
+                  <div
+                    key={item.key}
+                    className="flex gap-3 rounded-xl border border-border/60 p-2.5"
+                  >
+                    <div className="grid size-16 shrink-0 place-items-center rounded-lg bg-muted">
+                      <Store className="size-5 text-muted-foreground" />
+                    </div>
+                    <div className="flex flex-1 flex-col">
+                      <p className="text-sm font-medium leading-tight">
+                        {item.product.title}
+                      </p>
+                      {item.isCustomized && (
+                        <p className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                          <Sparkles className="size-3" />
+                          Customized
+                        </p>
+                      )}
+                      {item.isCustomized && item.customNotes && (
+                        <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
+                          📝 {item.customNotes}
+                        </p>
+                      )}
+                      {item.isCustomized &&
+                        !!item.customImages?.length && (
+                          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <ImageIcon className="size-3" />
+                            {item.customImages.length} reference photo
+                            {item.customImages.length > 1 ? 's' : ''}
+                          </p>
+                        )}
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {formatPrice(unit)} each
+                      </p>
+                      <div className="mt-auto flex items-center justify-between pt-1.5">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() =>
+                              updateQuantity(item.key, item.quantity - 1)
+                            }
+                            aria-label="Decrease quantity"
+                          >
+                            <Minus />
+                          </Button>
+                          <span className="w-6 text-center text-sm tabular-nums">
+                            {item.quantity}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() =>
+                              updateQuantity(item.key, item.quantity + 1)
+                            }
+                            aria-label="Increase quantity"
+                          >
+                            <Plus />
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium tabular-nums">
+                            {formatPrice(unit * item.quantity)}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => removeItem(item.key)}
+                            aria-label="Remove item"
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <SheetFooter className="gap-2.5 border-t border-border/60">
@@ -160,7 +223,6 @@ export function CartDrawer() {
               <Button
                 size="lg"
                 className="h-10 w-full rounded-xl bg-zinc-900 hover:bg-zinc-800"
-                disabled={items.length === 0}
                 onClick={() => {
                   closeDrawer();
                   router.push('/checkout');
@@ -169,6 +231,16 @@ export function CartDrawer() {
                 Proceed to Checkout
                 <ArrowRight className="size-4" />
               </Button>
+
+              <a
+                href={whatsappOrderUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+              >
+                <MessageCircle className="size-4" />
+                Confirm Order via WhatsApp
+              </a>
             </SheetFooter>
           </>
         )}

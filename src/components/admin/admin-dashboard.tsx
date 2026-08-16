@@ -3,8 +3,10 @@
 import { useMemo, useState } from 'react';
 import {
   HandCoins,
+  Eye,
   Loader2,
   PackagePlus,
+  Pencil,
   Plus,
   Search,
   ShoppingBag,
@@ -20,12 +22,13 @@ import {
   createProductAction,
   deleteProductAction,
   updateOrderStatusAction,
+  updateProductAction,
 } from '@/app/actions/admin';
 import type {
   Category,
   Order,
+  OrderItem,
   OrderStatus,
-  PaymentStatus,
   Product,
 } from '@/types/database';
 
@@ -47,21 +50,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
-const ORDER_STATUSES: OrderStatus[] = [
-  'Pending',
-  'Processing',
-  'Shipped',
-  'Delivered',
-  'Cancelled',
-];
-
-const paymentChip: Record<PaymentStatus, string> = {
-  Paid: 'bg-emerald-500/15 text-emerald-400',
-  Unpaid: 'bg-amber-500/15 text-amber-400',
-  Failed: 'bg-red-500/15 text-red-400',
-  Refunded: 'bg-zinc-500/15 text-zinc-400',
-};
+import {
+  OrderDetailsModal,
+  statusChip as orderStatusChip,
+} from '@/components/admin/OrderDetailsModal';
 
 interface AttributeRow {
   key: string;
@@ -86,16 +78,21 @@ function parseAttributeValue(raw: string): unknown {
 
 export function AdminDashboard({
   initialOrders,
+  initialOrderItems,
   initialCategories,
   initialProducts,
 }: {
   initialOrders: Order[];
+  initialOrderItems: OrderItem[];
   initialCategories: Category[];
   initialProducts: Product[];
 }) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>(initialOrderItems);
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [tab, setTab] = useState<'orders' | 'catalog'>('orders');
+  const [orderTab, setOrderTab] = useState<'normal' | 'customized'>('normal');
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [prodSearch, setProdSearch] = useState('');
   const [prodCategory, setProdCategory] = useState('all');
   const [deleting, setDeleting] = useState<
@@ -108,6 +105,7 @@ export function AdminDashboard({
   const [statusError, setStatusError] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -124,6 +122,8 @@ export function AdminDashboard({
   const [stock, setStock] = useState('');
   const [category, setCategory] = useState(defaultCategory);
   const [featured, setFeatured] = useState(false);
+  const [allowCustomization, setAllowCustomization] = useState(false);
+  const [customPrice, setCustomPrice] = useState('');
   const [description, setDescription] = useState('');
   const [imagesText, setImagesText] = useState('');
   const [attributes, setAttributes] = useState<AttributeRow[]>([
@@ -137,6 +137,33 @@ export function AdminDashboard({
     ).length;
     return { revenue, orders: orders.length, pendingCod };
   }, [orders]);
+
+  const itemsByOrder = useMemo(() => {
+    const map = new Map<string, OrderItem[]>();
+    for (const item of orderItems) {
+      const list = map.get(item.order_id) ?? [];
+      list.push(item);
+      map.set(item.order_id, list);
+    }
+    return map;
+  }, [orderItems]);
+
+  const productsById = useMemo(() => {
+    const map = new Map<string, Product>();
+    for (const product of products) map.set(product.id, product);
+    return map;
+  }, [products]);
+
+  const visibleOrders = useMemo(() => {
+    if (orderTab === 'normal') return orders;
+    return orders.filter((order) =>
+      (itemsByOrder.get(order.id) ?? []).some((item) => item.is_customized),
+    );
+  }, [orders, orderItems, orderTab, itemsByOrder]);
+
+  const selectedOrder = selectedOrderId
+    ? (orders.find((o) => o.id === selectedOrderId) ?? null)
+    : null;
 
   const categoryNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -220,11 +247,53 @@ export function AdminDashboard({
     setStock('');
     setCategory(defaultCategory);
     setFeatured(false);
+    setAllowCustomization(false);
+    setCustomPrice('');
     setDescription('');
     setImagesText('');
     setAttributes([{ key: '', value: '' }]);
     setFormError(null);
     setFormSuccess(null);
+  }
+
+  function openCreateModal() {
+    setEditingProduct(null);
+    resetForm();
+    setModalOpen(true);
+  }
+
+  function openEditModal(product: Product) {
+    setEditingProduct(product);
+    setTitle(product.title);
+    setPrice(String(product.price));
+    setOriginalPrice(
+      product.original_price != null ? String(product.original_price) : '',
+    );
+    setStock(String(product.stock));
+    const categoryId = product.category_id ?? '';
+    setCategory(
+      categories.find((c) => c.id === categoryId)?.slug ??
+        categories.find((c) => c.slug === categoryId)?.slug ??
+        defaultCategory,
+    );
+    setFeatured(product.is_featured);
+    setAllowCustomization(product.allow_customization);
+    setCustomPrice(
+      product.custom_price != null ? String(product.custom_price) : '',
+    );
+    setDescription(product.description ?? '');
+    setImagesText(product.images.join('\n'));
+    setAttributes(
+      Object.keys(product.attributes).length > 0
+        ? Object.entries(product.attributes).map(([key, value]) => ({
+            key,
+            value: typeof value === 'string' ? value : JSON.stringify(value),
+          }))
+        : [{ key: '', value: '' }],
+    );
+    setFormError(null);
+    setFormSuccess(null);
+    setModalOpen(true);
   }
 
   async function handleStatusChange(orderId: string, status: string) {
@@ -246,7 +315,7 @@ export function AdminDashboard({
     }
   }
 
-  async function handleCreateProduct(e: React.FormEvent) {
+  async function handleSubmitProduct(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
     setFormSuccess(null);
@@ -259,6 +328,10 @@ export function AdminDashboard({
     }
     if (stock === '' || isNaN(stockNum) || stockNum < 0) {
       return setFormError('Enter valid stock.');
+    }
+    const customPriceNum = customPrice === '' ? null : Number(customPrice);
+    if (allowCustomization && (customPriceNum === null || isNaN(customPriceNum) || customPriceNum < 0)) {
+      return setFormError('Enter a valid custom price when customization is enabled.');
     }
 
     const attributesMap: Record<string, any> = {};
@@ -279,7 +352,7 @@ export function AdminDashboard({
 
     setSubmitting(true);
     try {
-      const result = await createProductAction({
+      const payload = {
         title,
         slug,
         description: description || null,
@@ -290,12 +363,48 @@ export function AdminDashboard({
         category_id: category,
         attributes: attributesMap,
         is_featured: featured,
-      });
+        allow_customization: allowCustomization,
+        custom_price: customPriceNum,
+      };
+
+      const result = editingProduct
+        ? await updateProductAction(editingProduct.id, payload)
+        : await createProductAction(payload);
+
       if (!result.success) {
-        setFormError(result.error ?? 'Could not create product.');
+        setFormError(result.error ?? 'Could not save product.');
         return;
       }
-      setFormSuccess(`Product "${title}" created (#${result.id?.slice(0, 8)}).`);
+
+      const updatedProduct: Product = {
+        ...(editingProduct ??
+          ({
+            id: result.id ?? crypto.randomUUID(),
+            created_at: new Date().toISOString(),
+          } as Product)),
+        title,
+        slug,
+        description: description || null,
+        price: priceNum,
+        original_price: originalPrice ? Number(originalPrice) : null,
+        stock: stockNum,
+        images,
+        category_id: slugToId.get(category) ?? editingProduct?.category_id ?? category,
+        attributes: attributesMap,
+        is_featured: featured,
+        allow_customization: allowCustomization,
+        custom_price: customPriceNum,
+      };
+
+      if (editingProduct) {
+        setProducts((prev) =>
+          prev.map((p) => (p.id === editingProduct.id ? updatedProduct : p)),
+        );
+        setFormSuccess(`Product "${title}" updated.`);
+      } else {
+        setProducts((prev) => [updatedProduct, ...prev]);
+        setFormSuccess(`Product "${title}" created (#${result.id?.slice(0, 8)}).`);
+      }
       resetForm();
       setModalOpen(false);
     } catch (err) {
@@ -321,10 +430,7 @@ export function AdminDashboard({
           </Badge>
           <Button
             className="h-9 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200"
-            onClick={() => {
-              resetForm();
-              setModalOpen(true);
-            }}
+            onClick={openCreateModal}
           >
             <PackagePlus className="size-4" />
             Add Product
@@ -412,11 +518,37 @@ export function AdminDashboard({
       {/* Orders */}
       {tab === 'orders' && (
         <div className="mt-8 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
-        <div className="border-b border-zinc-800 px-5 py-4">
-          <h2 className="text-sm font-semibold">Orders</h2>
-          <p className="mt-0.5 text-xs text-zinc-500">
-            COD and online orders, newest first.
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 px-5 py-4">
+          <div>
+            <h2 className="text-sm font-semibold">Orders</h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              {visibleOrders.length} of {orders.length} orders shown.
+            </p>
+          </div>
+          <div className="flex items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-950 p-1">
+            <button
+              type="button"
+              onClick={() => setOrderTab('normal')}
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                orderTab === 'normal'
+                  ? 'bg-zinc-800 text-white'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              📦 Normal Orders
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrderTab('customized')}
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                orderTab === 'customized'
+                  ? 'bg-amber-500/15 text-amber-400'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              ✨ Customized Orders
+            </button>
+          </div>
         </div>
 
         {statusError && (
@@ -426,75 +558,96 @@ export function AdminDashboard({
         )}
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="w-full min-w-[820px] text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-800 text-[11px] uppercase tracking-widest text-zinc-500">
-                <th className="px-5 py-3 font-medium">Order #</th>
+                <th className="px-5 py-3 font-medium">Order ID &amp; Date</th>
                 <th className="px-5 py-3 font-medium">Customer</th>
-                <th className="px-5 py-3 font-medium">WhatsApp Phone</th>
-                <th className="px-5 py-3 font-medium">City</th>
-                <th className="px-5 py-3 font-medium">Payment Status</th>
-                <th className="px-5 py-3 font-medium">Order Status</th>
+                <th className="px-5 py-3 font-medium">Total</th>
+                <th className="px-5 py-3 font-medium">Payment</th>
+                <th className="px-5 py-3 font-medium">Status</th>
+                <th className="px-5 py-3 text-right font-medium">Action</th>
               </tr>
             </thead>
             <tbody>
-              {orders.length === 0 ? (
+              {visibleOrders.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-12 text-center text-zinc-500">
-                    No orders yet. Place a test order from the storefront.
+                    {orderTab === 'customized'
+                      ? 'No customized orders yet. Custom orders appear here when a customer picks "Customize This Product".'
+                      : 'No orders yet. Place a test order from the storefront.'}
                   </td>
                 </tr>
               ) : (
-                orders.map((order) => (
-                  <tr
-                    key={order.id}
-                    className="border-b border-zinc-800/70 transition-colors last:border-0 hover:bg-zinc-800/40"
-                  >
-                    <td className="px-5 py-3.5 font-mono text-xs text-zinc-300">
-                      #{order.order_number}
-                    </td>
-                    <td className="px-5 py-3.5 font-medium">{order.customer_name}</td>
-                    <td className="px-5 py-3.5 text-zinc-400 tabular-nums">
-                      {order.phone_whatsapp}
-                    </td>
-                    <td className="px-5 py-3.5 text-zinc-400">{order.city ?? '—'}</td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${paymentChip[order.payment_status]}`}
-                      >
-                        {order.payment_status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={order.order_status}
-                          onValueChange={(value) => {
-                            if (value) handleStatusChange(order.id, value);
-                          }}
-                          disabled={busy[order.id]}
-                        >
-                          <SelectTrigger
-                            size="sm"
-                            className="border-zinc-700 bg-zinc-800 text-zinc-200 dark:bg-zinc-800"
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ORDER_STATUSES.map((status) => (
-                              <SelectItem key={status} value={status}>
-                                {status}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {busy[order.id] && (
-                          <Loader2 className="size-3.5 animate-spin text-zinc-500" />
+                visibleOrders.map((order) => {
+                  const items = itemsByOrder.get(order.id) ?? [];
+                  const hasCustomized = items.some((item) => item.is_customized);
+                  return (
+                    <tr
+                      key={order.id}
+                      onClick={() => setSelectedOrderId(order.id)}
+                      className="cursor-pointer border-b border-zinc-800/70 transition-colors last:border-0 hover:bg-zinc-800/40"
+                    >
+                      <td className="px-5 py-3.5">
+                        <p className="font-mono text-xs font-semibold text-zinc-200">
+                          #{order.order_number}
+                          {hasCustomized && (
+                            <span className="ml-2 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-400">
+                              ✨
+                            </span>
+                          )}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-zinc-500">
+                          {new Date(order.created_at).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </p>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <p className="font-medium text-zinc-100">
+                          {order.customer_name}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-zinc-500 tabular-nums">
+                          {order.phone_whatsapp}
+                        </p>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="text-sm font-extrabold text-emerald-400 tabular-nums">
+                          {formatPrice(order.total_amount)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="rounded-lg bg-zinc-800 px-2 py-1 text-xs font-medium text-zinc-300">
+                          {order.payment_method === 'COD'
+                            ? 'COD'
+                            : order.payment_method === 'ONLINE_CARD'
+                              ? 'Card / Wallet'
+                              : 'Mobile Wallet'}
+                        </span>
+                        {order.payment_gateway_ref && (
+                          <p className="mt-1 font-mono text-[10px] text-zinc-600">
+                            Txn: {order.payment_gateway_ref}
+                          </p>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${orderStatusChip[order.order_status]}`}
+                        >
+                          {order.order_status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <span className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-800 px-3 text-xs font-semibold text-zinc-300 transition-colors hover:bg-emerald-600/15 hover:text-emerald-400">
+                          <Eye className="size-3.5" />
+                          View Order Details
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -596,6 +749,13 @@ export function AdminDashboard({
                             <p className="max-w-56 truncate font-mono text-[10px] text-zinc-600">
                               {product.slug}
                             </p>
+                            {product.allow_customization && (
+                              <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">
+                                ✨ Customizable
+                                {product.custom_price != null &&
+                                  ` · ${formatPrice(product.custom_price)}`}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -640,24 +800,34 @@ export function AdminDashboard({
                         )}
                       </td>
                       <td className="px-5 py-3 text-right">
-                        {deleting[product.id] === 'busy' ? (
-                          <Loader2 className="ml-auto size-4 animate-spin text-zinc-500" />
-                        ) : (
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
-                            onClick={() => handleDeleteProduct(product.id)}
-                            className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors ${
-                              deleting[product.id] === 'confirm'
-                                ? 'bg-red-600 text-white hover:bg-red-500'
-                                : 'bg-zinc-800 text-zinc-400 hover:bg-red-600/15 hover:text-red-400'
-                            }`}
+                            onClick={() => openEditModal(product)}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-800 px-3 text-xs font-semibold text-zinc-300 transition-colors hover:bg-amber-500/15 hover:text-amber-400"
                           >
+                            <Pencil className="size-3.5" />
+                            Edit
+                          </button>
+                          {deleting[product.id] === 'busy' ? (
+                            <Loader2 className="size-4 animate-spin text-zinc-500" />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProduct(product.id)}
+                              className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors ${
+                                deleting[product.id] === 'confirm'
+                                  ? 'bg-red-600 text-white hover:bg-red-500'
+                                  : 'bg-zinc-800 text-zinc-400 hover:bg-red-600/15 hover:text-red-400'
+                              }`}
+                            >
                             <Trash2 className="size-3.5" />
                             {deleting[product.id] === 'confirm'
                               ? 'Confirm Delete'
                               : 'Delete'}
-                          </button>
-                        )}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -727,13 +897,17 @@ export function AdminDashboard({
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add Product</DialogTitle>
+            <DialogTitle>
+              {editingProduct ? 'Edit Product' : 'Add Product'}
+            </DialogTitle>
             <DialogDescription>
-              New products appear instantly in the storefront catalog.
+              {editingProduct
+                ? `Update "${editingProduct.title}" — changes go live in the storefront instantly.`
+                : 'New products appear instantly in the storefront catalog.'}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreateProduct} className="grid gap-4">
+          <form onSubmit={handleSubmitProduct} className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
@@ -916,6 +1090,54 @@ export function AdminDashboard({
               </span>
             </button>
 
+            <button
+              type="button"
+              onClick={() => setAllowCustomization((c) => !c)}
+              className={`flex items-center justify-between rounded-xl border p-3 text-sm transition-colors ${
+                allowCustomization
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border/60 hover:border-border'
+              }`}
+            >
+              <span>
+                <span className="block font-medium">
+                  Allow Customization for this Product
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  Customers can order a tailored version with notes &amp; photos
+                </span>
+              </span>
+              <span
+                className={`relative h-5 w-9 rounded-full transition-colors ${
+                  allowCustomization ? 'bg-primary' : 'bg-muted'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 size-4 rounded-full bg-background shadow transition-all ${
+                    allowCustomization ? 'left-4.5' : 'left-0.5'
+                  }`}
+                />
+              </span>
+            </button>
+
+            {allowCustomization && (
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                  Custom Price (PKR)
+                </label>
+                <Input
+                  placeholder="e.g. 5999"
+                  inputMode="numeric"
+                  value={customPrice}
+                  onChange={(e) => setCustomPrice(e.target.value)}
+                />
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Charged when a customer selects &quot;Customize This
+                  Product&quot; instead of the standard price.
+                </p>
+              </div>
+            )}
+
             {formError && (
               <p className="rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">
                 {formError}
@@ -926,15 +1148,30 @@ export function AdminDashboard({
               <Button type="submit" disabled={submitting}>
                 {submitting ? (
                   <Loader2 className="size-4 animate-spin" />
+                ) : editingProduct ? (
+                  <Pencil className="size-4" />
                 ) : (
                   <PackagePlus className="size-4" />
                 )}
-                Create Product
+                {editingProduct ? 'Save Changes' : 'Create Product'}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Order details drawer */}
+      {selectedOrder && (
+        <OrderDetailsModal
+          order={selectedOrder}
+          items={itemsByOrder.get(selectedOrder.id) ?? []}
+          productsById={productsById}
+          onClose={() => setSelectedOrderId(null)}
+          onStatusChange={async (orderId, status) => {
+            await handleStatusChange(orderId, status);
+          }}
+        />
+      )}
     </div>
   );
 }

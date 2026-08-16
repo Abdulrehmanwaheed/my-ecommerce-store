@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import { STORE_CONFIG } from '@/store.config';
 import {
   fetchAllCategories,
+  fetchAllOrderItems,
   fetchAllOrders,
   fetchProducts,
 } from '@/lib/backend-demo';
@@ -16,10 +17,11 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminPage() {
-  const [orders, categories, products] = await Promise.all([
+  const [orders, categories, products, orderItems] = await Promise.all([
     fetchAllOrders(),
     fetchAllCategories(),
     fetchProducts(),
+    fetchAllOrderItems(),
   ]);
 
   return (
@@ -27,6 +29,7 @@ export default async function AdminPage() {
       <div className="mx-auto max-w-6xl">
         <AdminDashboard
           initialOrders={orders}
+          initialOrderItems={orderItems}
           initialCategories={categories}
           initialProducts={products}
         />

@@ -4,6 +4,7 @@ import {
   adminCreateCategory,
   adminCreateProduct,
   adminDeleteProduct,
+  adminUpdateProduct,
   updateOrderStatus as demoUpdateOrderStatus,
 } from '@/lib/backend-demo';
 import type { CreateProductInput, OrderStatus } from '@/types/database';
@@ -39,6 +40,21 @@ export async function createProductAction(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Create failed.',
+    };
+  }
+}
+
+export async function updateProductAction(
+  productId: string,
+  input: CreateProductInput,
+): Promise<AdminActionResult> {
+  try {
+    return await adminUpdateProduct(productId, input);
+  } catch (error) {
+    console.error('[admin] updateProduct failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Update failed.',
     };
   }
 }

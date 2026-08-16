@@ -46,7 +46,7 @@ export async function createOrder(
 
     const { data: products, error: productsError } = await supabase
       .from('products')
-      .select('id, title, price')
+      .select('id, title, price, allow_customization, custom_price')
       .in('id', productIds);
 
     if (productsError) {
@@ -68,9 +68,26 @@ export async function createOrder(
       if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
         throw new Error(`Invalid quantity for product: ${product.title}`);
       }
-      const unitPrice = Number(product.price);
+      const isCustomized = item.is_customized === true;
+      if (isCustomized && !product.allow_customization) {
+        throw new Error(
+          `"${product.title}" does not support customization.`,
+        );
+      }
+      const unitPrice = Number(
+        isCustomized
+          ? (product.custom_price ?? product.price)
+          : product.price,
+      );
       subtotal += unitPrice * item.quantity;
-      return { product_id: product.id, quantity: item.quantity, unit_price: unitPrice };
+      return {
+        product_id: product.id,
+        quantity: item.quantity,
+        unit_price: unitPrice,
+        is_customized: isCustomized,
+        custom_notes: isCustomized ? (item.custom_notes ?? null) : null,
+        custom_images: isCustomized ? (item.custom_images ?? []) : [],
+      };
     });
 
     const shippingFee =

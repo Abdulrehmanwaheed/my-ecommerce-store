@@ -20,6 +20,7 @@ const CATEGORY_ICONS: Record<string, { icon: typeof Package; label: string }> = 
   'kids-wear': { icon: Baby, label: "Kids Wear" },
   dresses: { icon: Sparkles, label: 'Fancy Dresses' },
   'fancy-dresses': { icon: Sparkles, label: 'Fancy Dresses' },
+  Bags: { icon: ShoppingBag, label: "Women's Bags" },
   bags: { icon: ShoppingBag, label: "Women's Bags" },
   'women-bags': { icon: ShoppingBag, label: "Women's Bags" },
   jewelry: { icon: Gem, label: 'Watches & Jewelry' },
@@ -56,8 +57,8 @@ export function CategoryBar({
   ];
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6">
-      <div className="scrollbar-none -mx-1 flex items-start gap-4 overflow-x-auto px-1 pt-2 pb-1">
+    <div className="w-full max-w-7xl mx-auto mt-6 px-4 py-4 sm:py-6">
+      <div className="scrollbar-none flex flex-nowrap items-center justify-between gap-4 overflow-x-auto sm:gap-6 lg:grid lg:grid-cols-9 lg:gap-4">
         {filters.map((filter) => {
           const { icon: Icon, label } = iconFor(filter);
           const isActive = active === filter.slug;
@@ -67,17 +68,17 @@ export function CategoryBar({
               key={filter.slug}
               type="button"
               onClick={() => onSelect(filter.slug)}
-              className="story-bounce group flex shrink-0 flex-col items-center gap-1.5"
+              className="story-bounce group flex shrink-0 flex-col items-center justify-center"
               aria-label={`Filter by ${filter.name}`}
             >
-              <span
-                className={`story-ring grid size-14 place-items-center rounded-full bg-[color:var(--bg-card)] shadow-md transition-shadow ${
+                <span
+                className={`story-ring grid size-16 sm:size-20 place-items-center rounded-full bg-[color:var(--bg-card)] shadow-md transition-shadow ${
                   isActive ? 'shadow-[0_0_18px_var(--border-glow)]' : ''
                 }`}
               >
                 <span className="grid size-full place-items-center rounded-full bg-[color:var(--bg-card)] transition-colors group-hover:bg-white">
                   <Icon
-                    className={`size-6 transition-colors ${
+                    className={`size-8 transition-colors ${
                       isActive
                         ? 'text-[color:var(--primary)]'
                         : 'text-zinc-600 group-hover:text-[color:var(--primary)]'
@@ -86,7 +87,7 @@ export function CategoryBar({
                 </span>
               </span>
               <span
-                className={`text-[11px] font-semibold whitespace-nowrap ${
+                className={`mt-2 max-w-[100px] text-center text-xs font-semibold tracking-wide whitespace-nowrap ${
                   isActive
                     ? 'text-[color:var(--primary)]'
                     : 'text-zinc-600 group-hover:text-zinc-900'

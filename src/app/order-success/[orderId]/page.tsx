@@ -155,13 +155,53 @@ export default async function OrderSuccessPage({
           </p>
           <ul className="mt-3 space-y-2.5">
             {items.map((item, index) => (
-              <li key={item.id} className="flex items-baseline justify-between gap-4 text-sm">
-                <span className="text-white/85">
-                  {item.quantity} × {titleFor(item.product_id, index)}
-                </span>
-                <span className="font-mono text-xs tabular-nums text-white/90">
-                  {formatPrice(item.unit_price * item.quantity)}
-                </span>
+              <li key={item.id}>
+                <div className="flex items-baseline justify-between gap-4 text-sm">
+                  <span className="text-white/85">
+                    {item.quantity} × {titleFor(item.product_id, index)}
+                    {item.is_customized && (
+                      <span className="ml-2 rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                        ✨ Customized
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-mono text-xs tabular-nums text-white/90">
+                    {formatPrice(item.unit_price * item.quantity)}
+                  </span>
+                </div>
+                {item.is_customized && (
+                  <div className="mt-1.5 rounded-xl bg-white/5 px-3 py-2 text-xs text-white/60">
+                    {item.custom_notes && (
+                      <p className="leading-relaxed">
+                        <span className="font-semibold text-white/80">
+                          Instructions:
+                        </span>{' '}
+                        {item.custom_notes}
+                      </p>
+                    )}
+                    {item.custom_images && item.custom_images.length > 0 && (
+                      <p className="mt-1">
+                        <span className="font-semibold text-white/80">
+                          Reference photos:
+                        </span>{' '}
+                        {item.custom_images.map((url, urlIndex) => (
+                          <a
+                            key={url}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-amber-300 underline underline-offset-2 hover:text-amber-200"
+                          >
+                            Photo {urlIndex + 1}
+                            {urlIndex < item.custom_images!.length - 1
+                              ? ', '
+                              : ''}
+                          </a>
+                        ))}
+                      </p>
+                    )}
+                  </div>
+                )}
               </li>
             ))}
           </ul>

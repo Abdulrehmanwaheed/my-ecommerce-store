@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/tabs';
 import { ImageViewer } from '@/components/product/image-viewer';
 import { BuyActions } from '@/components/product/buy-actions';
+import { CustomizationOptions } from '@/components/product/customization-options';
 import { ProductCard } from '@/components/storefront/product-card';
 
 interface ProductPageProps {
@@ -144,29 +145,37 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <span className="text-zinc-500">· 214 reviews</span>
           </div>
 
-          {/* Price box */}
-          <div className="mt-5 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-baseline gap-3">
-              <span className="text-4xl font-extrabold text-zinc-900 tabular-nums">
-                {formatPrice(product.price)}
-              </span>
-              {product.original_price &&
-                product.original_price > product.price && (
-                  <>
-                    <span className="text-lg text-zinc-400 line-through tabular-nums">
-                      {formatPrice(product.original_price)}
-                    </span>
-                    <span className="rounded-full bg-red-600 px-2.5 py-1 text-xs font-bold text-white">
-                      Save {discount}%
-                    </span>
-                  </>
-                )}
+          {product.allow_customization ? (
+            <div className="mt-5">
+              <CustomizationOptions product={product} />
             </div>
-            <p className="mt-1.5 text-[11px] text-zinc-500">
-              Inclusive of all taxes · Flat{' '}
-              {formatPrice(STORE_CONFIG.shipping.flatRateFee)} COD delivery
-            </p>
-          </div>
+          ) : (
+            <>
+              {/* Price box */}
+              <div className="mt-5 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-wrap items-baseline gap-3">
+                  <span className="text-4xl font-extrabold text-zinc-900 tabular-nums">
+                    {formatPrice(product.price)}
+                  </span>
+                  {product.original_price &&
+                    product.original_price > product.price && (
+                      <>
+                        <span className="text-lg text-zinc-400 line-through tabular-nums">
+                          {formatPrice(product.original_price)}
+                        </span>
+                        <span className="rounded-full bg-red-600 px-2.5 py-1 text-xs font-bold text-white">
+                          Save {discount}%
+                        </span>
+                      </>
+                    )}
+                </div>
+                <p className="mt-1.5 text-[11px] text-zinc-500">
+                  Inclusive of all taxes · Flat{' '}
+                  {formatPrice(STORE_CONFIG.shipping.flatRateFee)} COD delivery
+                </p>
+              </div>
+            </>
+          )}
 
           {/* Stock scarcity */}
           {product.stock > 0 ? (
@@ -201,9 +210,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </p>
 
           {/* Actions */}
-          <div className="mt-6">
-            <BuyActions product={product} />
-          </div>
+          {!product.allow_customization && (
+            <div className="mt-6">
+              <BuyActions product={product} />
+            </div>
+          )}
 
           {/* Trust icons */}
           <div className="mt-6 grid grid-cols-1 gap-2.5 text-xs text-zinc-600 sm:grid-cols-3">

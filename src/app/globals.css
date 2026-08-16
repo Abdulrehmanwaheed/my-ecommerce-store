@@ -84,22 +84,8 @@
 }
 
 @layer utilities {
-  .hero-grid {
-    background-image:
-      linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px);
-    background-size: 56px 56px;
-    animation: grid-pan 26s linear infinite;
-  }
-
   .hero-blob {
     animation: glow-drift 12s ease-in-out infinite;
-  }
-}
-
-@keyframes grid-pan {
-  to {
-    background-position: 56px 56px;
   }
 }
 
@@ -194,21 +180,6 @@
   display: none;
 }
 
-/* Floating hero product card */
-.animate-float {
-  animation: float-slow 6s ease-in-out infinite;
-}
-
-@keyframes float-slow {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
 :root {
   /* Dynamic Interactive Palette (Warm Gold & Rich Velvet Accent) */
   --bg-main: #faf7f2;
@@ -221,13 +192,6 @@
   --accent-rose: #e11d48;
 
   --border-glow: rgba(212, 175, 55, 0.3);
-}
-
-/* Glassmorphism Card Effect */
-.glass-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 /* Smooth Interactive Micro-Animations */

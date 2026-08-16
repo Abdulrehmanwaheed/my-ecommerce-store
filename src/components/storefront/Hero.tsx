@@ -106,7 +106,7 @@ export function Hero({ products }: { products: Product[] }) {
 
   return (
     <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
-      <div className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-950 via-zinc-900 to-emerald-950 text-white shadow-2xl shadow-zinc-900/30">
+      <div className="relative isolate overflow-hidden rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-950 via-zinc-900 to-emerald-950 text-white shadow-2xl shadow-zinc-900/30">
         {/* Ambient glows */}
         <div className="pointer-events-none absolute -top-10 -right-10 size-96 rounded-full bg-[color:var(--accent-emerald)]/15 blur-3xl" />
         <div className="hero-blob pointer-events-none absolute -bottom-24 -left-16 size-96 rounded-full bg-[color:var(--primary)]/10 blur-3xl" />

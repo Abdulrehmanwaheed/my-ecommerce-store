@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Banknote, CreditCard, Loader2, ShoppingBag, Truck } from 'lucide-react';
 
 import { STORE_CONFIG } from '@/store.config';
-import { selectSubtotal, useCartStore } from '@/lib/cart-store';
+import {
+  selectSubtotal,
+  unitPriceOf,
+  useCartStore,
+} from '@/lib/cart-store';
 import { formatPrice } from '@/lib/format';
 import { createOrder, type CreateOrderResult } from '@/app/actions/create-order';
 import type { PaymentMethod } from '@/types/database';
@@ -113,6 +117,9 @@ export function CheckoutForm() {
         items: items.map((item) => ({
           product_id: item.product.id,
           quantity: item.quantity,
+          is_customized: item.isCustomized,
+          custom_notes: item.customNotes ?? null,
+          custom_images: item.customImages ?? [],
         })),
       });
 
@@ -291,13 +298,21 @@ export function CheckoutForm() {
         <h2 className="text-base font-semibold">Order Summary</h2>
 
         <ul className="mt-4 space-y-3">
-          {items.map(({ product, quantity }) => (
-            <li key={product.id} className="flex items-start justify-between gap-3 text-sm">
+          {items.map((item) => (
+            <li
+              key={item.key}
+              className="flex items-start justify-between gap-3 text-sm"
+            >
               <span className="text-muted-foreground">
-                {quantity} × {product.title}
+                {item.quantity} × {item.product.title}
+                {item.isCustomized && (
+                  <span className="ml-1.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                    ✨ Customized
+                  </span>
+                )}
               </span>
               <span className="font-medium tabular-nums">
-                {formatPrice(product.price * quantity)}
+                {formatPrice(unitPriceOf(item) * item.quantity)}
               </span>
             </li>
           ))}

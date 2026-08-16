@@ -23,6 +23,8 @@ export interface Product {
   category_id: string | null;
   attributes: Record<string, any>;
   is_featured: boolean;
+  allow_customization: boolean;
+  custom_price: number | null;
   created_at: string;
 }
 
@@ -59,6 +61,9 @@ export interface OrderItem {
   product_id: string | null;
   quantity: number;
   unit_price: number;
+  is_customized: boolean;
+  custom_notes: string | null;
+  custom_images: string[];
 }
 
 export interface PaymentLog {
@@ -73,6 +78,9 @@ export interface PaymentLog {
 export interface CartItemInput {
   product_id: string;
   quantity: number;
+  is_customized?: boolean;
+  custom_notes?: string | null;
+  custom_images?: string[];
 }
 
 export interface CreateOrderInput {
@@ -96,4 +104,6 @@ export interface CreateProductInput {
   category_id?: string | null;
   attributes?: Record<string, any>;
   is_featured?: boolean;
+  allow_customization?: boolean;
+  custom_price?: number | null;
 }
