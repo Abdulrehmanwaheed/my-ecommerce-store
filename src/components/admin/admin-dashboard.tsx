@@ -436,8 +436,7 @@ export function AdminDashboard({
             Add Product
           </Button>
           <Button
-            variant="outline"
-            className="h-9 rounded-xl"
+            className="h-9 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200"
             onClick={() => {
               setCatError(null);
               setCatName('');
