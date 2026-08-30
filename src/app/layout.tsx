@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 import { STORE_CONFIG } from '@/store.config';
-import { fetchAllCategories } from '@/lib/backend-demo';
+import { CUSTOMIZED_CATEGORY, fetchAllCategories } from '@/lib/backend-demo';
 import { Providers } from '@/components/providers';
 import { AnnouncementBar } from '@/components/layout/AnnouncementBar';
 import { Navbar, type NavCategory } from '@/components/layout/Navbar';
@@ -35,12 +35,13 @@ export default async function RootLayout({
   let categories: NavCategory[] = [];
   try {
     const fetched = await fetchAllCategories();
-    categories = distinctCategories(
-      fetched.map((category) => ({
+    categories = distinctCategories([
+      { slug: CUSTOMIZED_CATEGORY.slug, name: CUSTOMIZED_CATEGORY.name },
+      ...fetched.map((category) => ({
         slug: category.slug,
         name: category.name,
       })),
-    );
+    ]);
   } catch (error) {
     console.error('Failed to load categories for layout:', error);
   }

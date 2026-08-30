@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Product } from '@/types/database';
+import { CUSTOMIZED_CATEGORY } from '@/lib/backend-demo';
 import { CategoryBar } from '@/components/storefront/CategoryBar';
 import {
   ProductGrid,
@@ -34,13 +35,13 @@ export function CatalogSection({
 
   const activeId = slugToId.get(active) ?? active;
 
-  const visible = useMemo(
-    () =>
-      active === 'all'
-        ? products
-        : products.filter((product) => product.category_id === activeId),
-    [products, active, activeId],
-  );
+const visible = useMemo(() => {
+    if (active === 'all') return products;
+    if (active === CUSTOMIZED_CATEGORY.slug) {
+      return products.filter((product) => product.allow_customization);
+    }
+    return products.filter((product) => product.category_id === activeId);
+  }, [products, active, activeId]);
 
   function handleSelect(slug: string) {
     setActive(slug);

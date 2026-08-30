@@ -6,6 +6,7 @@ import {
   Gem,
   Home,
   Package,
+  Paintbrush,
   Palette,
   Shirt,
   ShoppingBag,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import type { CatalogFilter } from '@/components/storefront/product-grid';
+import { CUSTOMIZED_CATEGORY } from '@/lib/backend-demo';
 
 const CATEGORY_ICONS: Record<string, { icon: typeof Package; label: string }> = {
   footwear: { icon: Footprints, label: 'Footwear' },
@@ -29,6 +31,8 @@ const CATEGORY_ICONS: Record<string, { icon: typeof Package; label: string }> = 
   'household-items': { icon: Home, label: 'Household' },
   cosmetics: { icon: Palette, label: 'Cosmetics' },
   'cosmetics-beauty': { icon: Palette, label: 'Cosmetics' },
+  customized: { icon: Paintbrush, label: 'Customized Items' },
+  'customized-items': { icon: Paintbrush, label: 'Customized Items' },
 };
 
 function iconFor(category: CatalogFilter) {
@@ -62,18 +66,23 @@ export function CategoryBar({
         {filters.map((filter) => {
           const { icon: Icon, label } = iconFor(filter);
           const isActive = active === filter.slug;
+          const isCustom = filter.slug === CUSTOMIZED_CATEGORY.slug;
 
           return (
             <button
               key={filter.slug}
               type="button"
               onClick={() => onSelect(filter.slug)}
-              className="story-bounce group flex shrink-0 flex-col items-center justify-center"
+              className="story-bounce group relative flex shrink-0 flex-col items-center justify-center"
               aria-label={`Filter by ${filter.name}`}
             >
                 <span
-                className={`story-ring grid size-16 sm:size-20 place-items-center rounded-full bg-[color:var(--bg-card)] shadow-md transition-shadow ${
+                className={`story-ring relative grid size-16 sm:size-20 place-items-center rounded-full bg-[color:var(--bg-card)] shadow-md transition-shadow ${
                   isActive ? 'shadow-[0_0_18px_var(--border-glow)]' : ''
+                } ${
+                  isCustom
+                    ? 'ring-2 ring-[color:var(--accent-emerald)]/70'
+                    : ''
                 }`}
               >
                 <span className="grid size-full place-items-center rounded-full bg-[color:var(--bg-card)] transition-colors group-hover:bg-white">
@@ -85,12 +94,19 @@ export function CategoryBar({
                     }`}
                   />
                 </span>
+                {isCustom && (
+                  <span className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-[color:var(--accent-emerald)] text-white shadow-md">
+                    <Sparkles className="size-3 fill-current" />
+                  </span>
+                )}
               </span>
               <span
                 className={`mt-2 max-w-[100px] text-center text-xs font-semibold tracking-wide whitespace-nowrap ${
                   isActive
                     ? 'text-[color:var(--primary)]'
-                    : 'text-zinc-600 group-hover:text-zinc-900'
+                    : isCustom
+                      ? 'text-emerald-700'
+                      : 'text-zinc-600 group-hover:text-zinc-900'
                 }`}
               >
                 {label}

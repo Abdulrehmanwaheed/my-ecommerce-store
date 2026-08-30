@@ -22,6 +22,18 @@ export const DEMO_CATEGORIES: { id: string; name: string }[] = [
   { id: 'cat-home', name: 'Home & Utility' },
 ];
 
+/**
+ * Virtual "Customized Items" category. It is not a database row —
+ * it is injected into the navigation and grouped by the
+ * `allow_customization` product flag instead of a category_id.
+ */
+export const CUSTOMIZED_CATEGORY: Category = {
+  id: 'customized',
+  name: 'Customized Items',
+  slug: 'customized',
+  created_at: new Date().toISOString(),
+};
+
 export const DEMO_PRODUCTS: Product[] = [
   {
     id: 'demo-prod-001',

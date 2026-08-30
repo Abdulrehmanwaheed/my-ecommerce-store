@@ -8,12 +8,14 @@ import {
   MapPin,
   Menu as MenuIcon,
   MessageCircle,
+  Paintbrush,
   ShoppingBag,
   User as UserIcon,
   X,
 } from 'lucide-react';
 
 import { STORE_CONFIG } from '@/store.config';
+import { CUSTOMIZED_CATEGORY } from '@/lib/backend-demo';
 import { selectCartCount, useCartStore } from '@/lib/cart-store';
 import { useAuth } from '@/lib/auth-context';
 import { signOutAction } from '@/app/actions/auth';
@@ -91,6 +93,15 @@ export function Navbar({ categories }: { categories: NavCategory[] }) {
                   </div>
                 </div>
               )}
+
+              <Link
+                href={`/?cat=${CUSTOMIZED_CATEGORY.slug}#catalog`}
+                onClick={() => setMenuOpen(false)}
+                className="hidden items-center gap-1.5 rounded-xl border border-[color:var(--accent-emerald)]/40 bg-[color:var(--accent-emerald)]/5 px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-[color:var(--accent-emerald)]/10 lg:inline-flex"
+              >
+                <Paintbrush className="size-4 text-[color:var(--accent-emerald)]" />
+                Custom Orders
+              </Link>
 
               <AccountButton />
 

@@ -1,6 +1,7 @@
-import { fetchAllCategories, fetchProducts } from '@/lib/backend-demo';
+import { CUSTOMIZED_CATEGORY, fetchAllCategories, fetchProducts } from '@/lib/backend-demo';
 import type { Product } from '@/types/database';
 import { Hero } from '@/components/storefront/Hero';
+import { CustomOrderBanner } from '@/components/storefront/custom-order-banner';
 import { CatalogSection } from '@/components/storefront/catalog-section';
 
 export const dynamic = 'force-dynamic';
@@ -36,13 +37,18 @@ export default async function HomePage({
       fetchAllCategories(),
     ]);
     products = fetchedProducts;
-    categories = distinctCategories(
-      fetchedCategories.map((category) => ({
+    categories = distinctCategories([
+      {
+        id: CUSTOMIZED_CATEGORY.id,
+        slug: CUSTOMIZED_CATEGORY.slug,
+        name: CUSTOMIZED_CATEGORY.name,
+      },
+      ...fetchedCategories.map((category) => ({
         id: category.id,
         slug: category.slug,
         name: category.name,
       })),
-    );
+    ]);
   } catch (error) {
     console.error('Failed to load homepage data:', error);
   }
@@ -50,6 +56,7 @@ export default async function HomePage({
   return (
     <main>
       <Hero products={products} />
+      <CustomOrderBanner />
       <CatalogSection
         products={products}
         categories={categories}
