@@ -321,6 +321,10 @@ let subtotal = 0;
   items.forEach((item) => {
     item.order_id = order.id;
     mockOrderItems.push(item);
+    const product = runtimeProducts.find((p) => p.id === item.product_id);
+    if (product) {
+      product.stock = Math.max(0, product.stock - item.quantity);
+    }
   });
 
   if (input.payment_method === 'COD') {

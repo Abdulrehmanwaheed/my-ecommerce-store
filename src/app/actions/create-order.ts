@@ -46,7 +46,7 @@ export async function createOrder(
 
     const { data: products, error: productsError } = await supabase
       .from('products')
-      .select('id, title, price, allow_customization, custom_price')
+      .select('id, title, price, allow_customization, custom_price, stock')
       .in('id', productIds);
 
     if (productsError) {
@@ -67,6 +67,9 @@ export async function createOrder(
       }
       if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
         throw new Error(`Invalid quantity for product: ${product.title}`);
+      }
+      if (product.stock < item.quantity) {
+        throw new Error(`Not enough stock for "${product.title}". Only ${product.stock} left.`);
       }
       const isCustomized = item.is_customized === true;
       if (isCustomized && !product.allow_customization) {
@@ -112,38 +115,32 @@ export async function createOrder(
       throw new Error(`Failed to save customer: ${customerError.message}`);
     }
 
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        customer_id: customer.id,
-        customer_name: input.customer_name.trim(),
-        phone_whatsapp: input.phone_whatsapp.trim(),
-        city: input.city ?? null,
-        address: input.address ?? null,
-        total_amount: totalAmount,
-        shipping_fee: shippingFee,
-        payment_method: input.payment_method,
-        payment_status: 'Unpaid',
-        order_status: 'Pending',
-        notes: input.notes ?? null,
-      })
-      .select('id, order_number')
-      .single();
+    const { data: orderData, error: rpcError } = await supabase
+      .rpc('create_order_with_stock_update', {
+        p_customer_id: customer.id,
+        p_customer_name: input.customer_name.trim(),
+        p_phone_whatsapp: input.phone_whatsapp.trim(),
+        p_city: input.city ?? null,
+        p_address: input.address ?? null,
+        p_total_amount: totalAmount,
+        p_shipping_fee: shippingFee,
+        p_payment_method: input.payment_method,
+        p_notes: input.notes ?? null,
+        p_items: items,
+      });
 
-    if (orderError) {
-      throw new Error(`Failed to create order: ${orderError.message}`);
+    if (rpcError) {
+      const message = rpcError.message.includes('Not enough stock')
+        ? 'One or more items in your cart are out of stock.'
+        : `Failed to create order: ${rpcError.message}`;
+      return { success: false, error: message };
     }
 
-    if (items.length > 0) {
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(items.map((item) => ({ ...item, order_id: order.id })));
-      if (itemsError) {
-        throw new Error(`Failed to save order items: ${itemsError.message}`);
-      }
+    const row = Array.isArray(orderData) ? orderData[0] : orderData;
+    if (!row) {
+      return { success: false, error: 'Order creation returned no data.' };
     }
-
-    const createdOrder = order as Pick<Order, 'id' | 'order_number'>;
+    const createdOrder = { id: row.p_order_id, order_number: row.p_order_number };
 
     if (input.payment_method === 'COD') {
       return {
@@ -157,6 +154,7 @@ export async function createOrder(
     return {
       success: true,
       orderId: createdOrder.id,
+      orderNumber: createdOrder.order_number,
       requiresPayment: true,
       gatewayUrl: `/api/payments/initiate?orderId=${createdOrder.id}`,
     };
