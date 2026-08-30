@@ -19,8 +19,6 @@ import type { NavCategory } from '@/components/layout/Navbar';
 const TRUST_ITEMS = [
   { icon: Truck, label: 'Fast Nationwide Shipping' },
   { icon: ShieldCheck, label: '100% Original Products' },
-  { icon: RotateCcw, label: '7-Day Easy Returns' },
-  { icon: Banknote, label: 'Cash on Delivery' },
 ];
 
 const SOCIALS = [
@@ -67,8 +65,7 @@ export function Footer({ categories }: { categories: NavCategory[] }) {
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-500">
             {STORE_CONFIG.brand.tagline}. Flat{' '}
             {STORE_CONFIG.region.currencySymbol}{' '}
-            {STORE_CONFIG.shipping.flatRateFee} delivery nationwide — pay only
-            when it lands at your door.
+            {STORE_CONFIG.shipping.flatRateFee} delivery nationwide.
           </p>
           <div className="mt-4 space-y-1.5 text-sm">
             <a

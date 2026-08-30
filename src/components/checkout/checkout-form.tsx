@@ -12,7 +12,6 @@ import {
   Plus,
   ShoppingBag,
   Star,
-  Truck,
   UserRound,
 } from 'lucide-react';
 
@@ -130,8 +129,7 @@ export function CheckoutForm() {
     applyAddress(addr);
   }
 
-  const shippingFee =
-    subtotal >= STORE_CONFIG.shipping.freeShippingThreshold ? 0 : STORE_CONFIG.shipping.flatRateFee;
+  const shippingFee = STORE_CONFIG.shipping.flatRateFee;
   const totalPayable = subtotal + shippingFee;
 
   function validatePhone(raw: string): boolean {
@@ -636,14 +634,7 @@ export function CheckoutForm() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Shipping</span>
-            {shippingFee === 0 ? (
-              <Badge variant="secondary" className="gap-1">
-                <Truck className="size-3" />
-                Free
-              </Badge>
-            ) : (
-              <span className="tabular-nums">{formatPrice(shippingFee)}</span>
-            )}
+            <span className="tabular-nums">{formatPrice(shippingFee)}</span>
           </div>
           <div className="flex items-center justify-between border-t border-border/60 pt-3">
             <span className="font-semibold">Total Payable</span>

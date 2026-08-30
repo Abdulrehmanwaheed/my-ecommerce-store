@@ -7,8 +7,7 @@ import { CheckoutForm } from '@/components/checkout/checkout-form';
 
 export const metadata: Metadata = {
   title: `Checkout — ${STORE_CONFIG.brand.name}`,
-  description: 'Secure checkout with Cash on Delivery or online payment.',
-};
+  description: 'Secure checkout with Cash on Delivery or online payment.',};
 
 export default function CheckoutPage() {
   return (
@@ -19,7 +18,7 @@ export default function CheckoutPage() {
             Checkout
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Fast, secure and COD-friendly.
+            Fast, secure and flexible payment options.
           </p>
         </div>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card px-3 py-1.5 text-xs text-muted-foreground">

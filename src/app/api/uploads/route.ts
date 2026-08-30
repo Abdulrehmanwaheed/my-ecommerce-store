@@ -17,27 +17,28 @@ const ALLOWED_TYPES = new Set([
 const BUCKET = 'custom-uploads';
 
 async function ensureBucket(): Promise<void> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Supabase storage is not configured.');
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.storage.getBucket(BUCKET);
+  if (data) return;
+
+  const missing =
+    !error ||
+    /not\s*found/i.test(String(error.message)) ||
+    /not\s*exist/i.test(String(error.message));
+  if (!missing) {
+    throw new Error(`Failed to read upload storage: ${error.message}`);
   }
-  const res = await fetch(`${supabaseUrl}/storage/v1/bucket`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      id: BUCKET,
-      name: BUCKET,
-      public: true,
-    }),
+
+  const { error: createError } = await supabase.storage.createBucket(BUCKET, {
+    public: true,
   });
-  // 409 = already exists — that's fine.
-  if (!res.ok && res.status !== 409) {
-    const body = await res.text();
-    throw new Error(`Failed to prepare upload storage: ${body}`);
+  if (
+    createError &&
+    !/already\s*exists/i.test(String(createError.message)) &&
+    !/BucketAlreadyExists/i.test(String(createError.message)) &&
+    !/Duplicate/i.test(String(createError.message))
+  ) {
+    throw new Error(`Failed to prepare upload storage: ${createError.message}`);
   }
 }
 

@@ -93,8 +93,7 @@ export async function createOrder(
       };
     });
 
-    const shippingFee =
-      subtotal >= shipping.freeShippingThreshold ? 0 : shipping.flatRateFee;
+    const shippingFee = shipping.flatRateFee;
     const totalAmount = subtotal + shippingFee;
 
     let customerId = input.customer_id ?? null;

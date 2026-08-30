@@ -19,7 +19,6 @@ export interface PaymentMethods {
 
 export interface ShippingRules {
   flatRateFee: number;
-  freeShippingThreshold: number;
   cities: string[];
 }
 

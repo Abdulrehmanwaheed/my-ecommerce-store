@@ -1,10 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   HandCoins,
   Eye,
   Loader2,
+  LogOut,
   PackagePlus,
   Pencil,
   Plus,
@@ -12,7 +14,9 @@ import {
   ShoppingBag,
   Star,
   Trash2,
+  Upload,
   Wallet,
+  X,
 } from 'lucide-react';
 
 import { formatPrice } from '@/lib/format';
@@ -24,6 +28,7 @@ import {
   updateOrderStatusAction,
   updateProductAction,
 } from '@/app/actions/admin';
+import { adminLogout } from '@/app/actions/admin-auth';
 import type {
   Category,
   Order,
@@ -87,6 +92,7 @@ export function AdminDashboard({
   initialCategories: Category[];
   initialProducts: Product[];
 }) {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [orderItems, setOrderItems] = useState<OrderItem[]>(initialOrderItems);
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -126,6 +132,8 @@ export function AdminDashboard({
   const [customPrice, setCustomPrice] = useState('');
   const [description, setDescription] = useState('');
   const [imagesText, setImagesText] = useState('');
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [attributes, setAttributes] = useState<AttributeRow[]>([
     { key: '', value: '' },
   ]);
@@ -315,6 +323,60 @@ export function AdminDashboard({
     }
   }
 
+  async function handleAdminLogout() {
+    await adminLogout();
+    router.push('/admin/login');
+    router.refresh();
+  }
+
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    if (files.length === 0) return;
+
+    setUploadError(null);
+    setUploadingImages(true);
+    try {
+      const chunks = [];
+      for (let i = 0; i < files.length; i += 3) {
+        chunks.push(files.slice(i, i + 3));
+      }
+
+      let uploaded: string[] = [];
+      for (const chunk of chunks) {
+        const formData = new FormData();
+        for (const file of chunk) formData.append('files', file);
+        const res = await fetch('/api/uploads', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok || !data.urls) {
+          throw new Error(data.error ?? 'Upload failed.');
+        }
+        uploaded = [...uploaded, ...data.urls];
+      }
+
+      const existing =
+        imagesText
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean) ?? [];
+      setImagesText([...existing, ...uploaded].join('\n'));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed.');
+    } finally {
+      setUploadingImages(false);
+    }
+  }
+
+  function handleRemoveImage(image: string) {
+    setImagesText((prev) =>
+      prev
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line && line !== image)
+        .join('\n'),
+    );
+  }
+
   async function handleSubmitProduct(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
@@ -428,6 +490,14 @@ export function AdminDashboard({
           <Badge className="border-zinc-700 bg-zinc-900 text-zinc-400">
             {isSupabaseConfigured() ? 'Live Supabase' : 'Demo data'}
           </Badge>
+          <button
+            type="button"
+            onClick={handleAdminLogout}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-zinc-700 px-3 text-sm font-medium text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
+          >
+            <LogOut className="size-3.5" />
+            Sign out
+          </button>
           <Button
             className="h-9 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200"
             onClick={openCreateModal}
@@ -991,17 +1061,65 @@ export function AdminDashboard({
                   onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
-              <div className="sm:col-span-2">
+<div className="sm:col-span-2">
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                  Image URLs (one per line)
+                  Product Images
                 </label>
-                <textarea
-                  rows={3}
-                  placeholder="https://example.com/product-1.jpg&#10;https://example.com/product-2.jpg"
-                  value={imagesText}
-                  onChange={(e) => setImagesText(e.target.value)}
-                  className="min-h-20 w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 dark:bg-input/30"
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-input bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-60">
+                    <Upload className="size-3.5" />
+                    {uploadingImages ? 'Uploading…' : 'Upload images'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="sr-only"
+                      disabled={uploadingImages}
+                      onChange={handleImageUpload}
+                    />
+                  </label>
+                  <span className="text-xs text-muted-foreground">
+                    JPEG, PNG, WebP up to 5MB each
+                  </span>
+                </div>
+                {uploadError && (
+                  <p className="mt-1.5 text-xs text-destructive">{uploadError}</p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2.5">
+                  {imagesText
+                    .split('\n')
+                    .map((line) => line.trim())
+                    .filter(Boolean)
+                    .map((url) => (
+                      <div
+                        key={url}
+                        className="group relative size-20 overflow-hidden rounded-xl border border-border/60 bg-zinc-100"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={url}
+                          alt="Product preview"
+                          className="size-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          aria-label="Remove image"
+                          onClick={() => handleRemoveImage(url)}
+                          className="absolute top-1 right-1 grid size-5 place-items-center rounded-full bg-zinc-900/70 text-white opacity-0 transition-opacity hover:bg-red-600 group-hover:opacity-100"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
+                    ))}
+                  {imagesText
+                    .split('\n')
+                    .map((line) => line.trim())
+                    .filter(Boolean).length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No images yet — upload photos to get started.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 

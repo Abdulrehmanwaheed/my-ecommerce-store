@@ -308,7 +308,7 @@ let subtotal = 0;
     });
   }
 
-  const shippingFee = subtotal >= shipping.freeShippingThreshold ? 0 : shipping.flatRateFee;
+  const shippingFee = shipping.flatRateFee;
   const totalAmount = subtotal + shippingFee;
 
   let customer = mockCustomers.find((c) => c.phone_whatsapp === input.phone_whatsapp.trim());

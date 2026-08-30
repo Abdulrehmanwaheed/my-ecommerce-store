@@ -1,8 +1,10 @@
 export const dynamic = 'force-dynamic';
 
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
 import { STORE_CONFIG } from '@/store.config';
+import { isAdminAuthorized } from '@/app/actions/admin-auth';
 import {
   fetchAllCategories,
   fetchAllOrderItems,
@@ -17,6 +19,10 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminPage() {
+  if (!(await isAdminAuthorized())) {
+    redirect('/admin/login');
+  }
+
   const [orders, categories, products, orderItems] = await Promise.all([
     fetchAllOrders(),
     fetchAllCategories(),

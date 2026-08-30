@@ -2,7 +2,6 @@ import Link from 'next/link';
 import {
   ArrowRight,
   MessageCircle,
-  RotateCcw,
   ShieldCheck,
   Star,
   Truck,
@@ -16,9 +15,8 @@ import type { Product } from '@/types/database';
 import { Button } from '@/components/ui/button';
 
 const TRUST_ITEMS = [
-  { icon: Truck, label: 'Fast COD Shipping' },
+  { icon: Truck, label: 'Fast Nationwide Shipping' },
   { icon: ShieldCheck, label: '100% Authentic Guarantee' },
-  { icon: RotateCcw, label: '7-Day Hassle-Free Returns' },
 ];
 
 interface StackItem {
@@ -116,7 +114,7 @@ export function Hero({ products }: { products: Product[] }) {
           <div className="lg:col-span-7">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--accent-emerald)]/40 bg-[color:var(--accent-emerald)]/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-400 uppercase tracking-wider shadow-[0_0_24px_rgba(5,150,105,0.35)]">
               <Zap className="size-3.5" />
-              All Pakistan COD Available
+              Nationwide Delivery Available
             </span>
 
             <h1 className="mt-6 max-w-2xl text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">

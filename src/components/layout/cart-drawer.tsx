@@ -44,9 +44,7 @@ export function CartDrawer() {
   const count = useCartStore(selectCartCount);
   const subtotal = useCartStore(selectSubtotal);
 
-  const { freeShippingThreshold } = STORE_CONFIG.shipping;
-  const remainingForFree = freeShippingThreshold - subtotal;
-  const progress = Math.min(100, (subtotal / freeShippingThreshold) * 100);
+  const shippingFee = STORE_CONFIG.shipping.flatRateFee;
 
   const whatsappOrderUrl = `https://wa.me/${
     STORE_CONFIG.whatsapp.phoneNumber
@@ -70,9 +68,9 @@ export function CartDrawer() {
         }
         return lines.join('\n');
       })
-      .join('\n\n')}\n\nTotal: ${formatPrice(
+      .join('\n\n')}\n\nSubtotal: ${formatPrice(
       subtotal,
-    )}${remainingForFree > 0 ? ` + ${formatPrice(STORE_CONFIG.shipping.flatRateFee)} shipping` : ' (Free Shipping)'}`,
+    )} + ${formatPrice(shippingFee)} shipping = ${formatPrice(subtotal + shippingFee)}`,
   )}`;
 
   return (
@@ -110,22 +108,10 @@ export function CartDrawer() {
         ) : (
           <>
             <div className="border-b border-zinc-200/80 bg-white px-4 py-3">
-              <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500">
-                <span className={`shrink leading-snug ${remainingForFree > 0 ? '' : 'font-semibold text-emerald-600'}`}>
-                  {remainingForFree > 0
-                    ? `Add ${formatPrice(remainingForFree)} more for FREE Shipping!`
-                    : '🎉 Free Shipping unlocked!'}
-                </span>
-                <span className="shrink-0">{count} item{count === 1 ? '' : 's'}</span>
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-100">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    remainingForFree > 0 ? 'bg-zinc-900' : 'bg-emerald-600'
-                  }`}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+              <p className="text-xs text-zinc-500">
+                {count} item{count === 1 ? '' : 's'} ·{' '}
+                {formatPrice(shippingFee)} flat delivery
+              </p>
             </div>
 
             <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">

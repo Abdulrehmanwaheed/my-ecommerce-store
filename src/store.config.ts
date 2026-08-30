@@ -20,7 +20,6 @@ export const STORE_CONFIG: StoreConfig = {
   },
   shipping: {
     flatRateFee: 200,
-    freeShippingThreshold: 5000,
     cities: [
       'Karachi',
       'Lahore',

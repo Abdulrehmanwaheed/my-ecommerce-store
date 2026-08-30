@@ -1,23 +1,15 @@
-import { RotateCcw, ShieldCheck, Truck, Zap } from 'lucide-react';
+import { ShieldCheck, Truck } from 'lucide-react';
 
 import { STORE_CONFIG } from '@/store.config';
 
 const CALLOUTS = [
   {
-    icon: Zap,
-    text: `Cash on Delivery Available Across Pakistan`,
-  },
-  {
     icon: ShieldCheck,
     text: `100% Original Products — Guaranteed`,
   },
   {
-    icon: RotateCcw,
-    text: `7-Day Easy Returns & Replacements`,
-  },
-  {
     icon: Truck,
-    text: `Free Delivery on orders over ${STORE_CONFIG.region.currencySymbol} ${STORE_CONFIG.shipping.freeShippingThreshold.toLocaleString()}`,
+    text: `Flat ${STORE_CONFIG.region.currencySymbol} ${STORE_CONFIG.shipping.flatRateFee} Delivery Nationwide`,
   },
 ];
 

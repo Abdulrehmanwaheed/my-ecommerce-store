@@ -168,7 +168,7 @@ export function CustomizationOptions({ product }: { product: Product }) {
         <p className="mt-1.5 text-[11px] text-zinc-500">
           {isCustom
             ? 'Custom price applies when you choose a tailored version.'
-            : 'Inclusive of all taxes · Flat COD delivery nationwide.'}
+            : 'Inclusive of all taxes · Flat delivery nationwide.'}
         </p>
       </div>
 

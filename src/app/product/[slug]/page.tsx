@@ -4,10 +4,10 @@ import { notFound } from 'next/navigation';
 import {
   ArrowLeft,
   CheckCircle2,
+  CreditCard,
   Flame,
   MessagesSquare,
   Package,
-  RotateCcw,
   ShieldCheck,
   Star,
   Truck,
@@ -94,6 +94,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
       ? Math.max(5, Math.round((product.stock / 10) * 100))
       : 100;
 
+  const hasDescription = Boolean(product.description?.trim());
+  const hasSpecs = specs.length > 0;
+  // Reviews are placeholder-only for now (no reviews system yet), so hide the
+  // empty reviews box until real review data is available.
+  const hasReviews = false;
+
   const whatsappUrl = `https://wa.me/${STORE_CONFIG.whatsapp.phoneNumber}?text=${encodeURIComponent(
     `Hello ${STORE_CONFIG.brand.name}! I ordered *${product.title}* and would like to leave a review.`,
   )}`;
@@ -171,7 +177,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 </div>
                 <p className="mt-1.5 text-[11px] text-zinc-500">
                   Inclusive of all taxes · Flat{' '}
-                  {formatPrice(STORE_CONFIG.shipping.flatRateFee)} COD delivery
+                  {formatPrice(STORE_CONFIG.shipping.flatRateFee)} delivery
+                  nationwide
                 </p>
               </div>
             </>
@@ -220,111 +227,112 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <div className="mt-6 grid grid-cols-1 gap-2.5 text-xs text-zinc-600 sm:grid-cols-3">
             <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm">
               <Truck className="size-4 shrink-0 text-emerald-600" />
-              Cash on Delivery
+              Fast Nationwide Delivery
             </div>
             <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm">
               <ShieldCheck className="size-4 shrink-0 text-emerald-600" />
               100% Original Guarantee
             </div>
             <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm">
-              <RotateCcw className="size-4 shrink-0 text-emerald-600" />
-              7-Day Easy Returns
+              <CreditCard className="size-4 shrink-0 text-emerald-600" />
+              Secure Online Payment
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom tabs */}
-      <div className="mt-12">
-        <Tabs defaultValue="description">
-          <TabsList className="w-full justify-start rounded-2xl border border-zinc-200 bg-white p-1 shadow-sm sm:w-fit">
-            <TabsTrigger value="description">Description &amp; Details</TabsTrigger>
-            <TabsTrigger value="specs">Specifications</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews (214)</TabsTrigger>
-          </TabsList>
+      {/* Bottom tabs — only render tabs that have real content */}
+      {(hasDescription || hasSpecs || hasReviews) && (
+        <div className="mt-12">
+          <Tabs defaultValue={hasDescription ? 'description' : hasSpecs ? 'specs' : 'reviews'}>
+            <TabsList className="w-full justify-start rounded-2xl border border-zinc-200 bg-white p-1 shadow-sm sm:w-fit">
+              {hasDescription && (
+                <TabsTrigger value="description">Description &amp; Details</TabsTrigger>
+              )}
+              {hasSpecs && <TabsTrigger value="specs">Specifications</TabsTrigger>}
+              {hasReviews && <TabsTrigger value="reviews">Reviews</TabsTrigger>}
+            </TabsList>
 
-          <TabsContent
-            value="description"
-            className="mt-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
-          >
-            <h2 className="text-lg font-bold text-zinc-900">
-              About this product
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-600">
-              {product.description}
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-600">
-              We ship to {STORE_CONFIG.shipping.cities.slice(0, 9).join(', ')}{' '}
-              and all major cities across Pakistan. Delivery is a flat{' '}
-              {formatPrice(STORE_CONFIG.shipping.flatRateFee)} nationwide, and
-              orders above{' '}
-              {formatPrice(STORE_CONFIG.shipping.freeShippingThreshold)}{' '}
-              qualify for free delivery. Same-day dispatch for orders placed
-              before 4 PM.
-            </p>
-          </TabsContent>
-
-          <TabsContent
-            value="specs"
-            className="mt-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
-          >
-            {specs.length > 0 ? (
-              <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
-                {specs.map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="flex items-baseline justify-between gap-4 border-b border-zinc-100 pb-2"
-                  >
-                    <dt className="text-sm text-zinc-500">{prettyKey(key)}</dt>
-                    <dd className="text-right text-sm font-medium text-zinc-900">
-                      {prettyValue(value)}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            ) : (
-              <p className="text-sm text-zinc-500">
-                No additional specifications listed for this product.
-              </p>
+            {hasDescription && (
+              <TabsContent
+                value="description"
+                className="mt-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
+              >
+                <h2 className="text-lg font-bold text-zinc-900">
+                  About this product
+                </h2>
+                <p className="mt-3 text-sm leading-relaxed text-zinc-600">
+                  {product.description}
+                </p>
+                <p className="mt-3 text-sm leading-relaxed text-zinc-600">
+                  We ship to {STORE_CONFIG.shipping.cities.slice(0, 9).join(', ')}{' '}
+                  and all major cities across Pakistan. Delivery is a flat{' '}
+                  {formatPrice(STORE_CONFIG.shipping.flatRateFee)} nationwide.
+                  Same-day dispatch for orders placed before 4 PM.
+                </p>
+              </TabsContent>
             )}
-          </TabsContent>
 
-          <TabsContent
-            value="reviews"
-            className="mt-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
-          >
-            <div className="flex flex-wrap items-center gap-6">
-              <div className="text-center">
-                <p className="text-5xl font-extrabold text-zinc-900">4.9</p>
-                <p className="mt-1 flex items-center justify-center gap-0.5 text-amber-500">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <Star key={index} className="size-4 fill-current" />
+            {hasSpecs && (
+              <TabsContent
+                value="specs"
+                className="mt-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
+              >
+                <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+                  {specs.map(([key, value]) => (
+                    <div
+                      key={key}
+                      className="flex items-baseline justify-between gap-4 border-b border-zinc-100 pb-2"
+                    >
+                      <dt className="text-sm text-zinc-500">{prettyKey(key)}</dt>
+                      <dd className="text-right text-sm font-medium text-zinc-900">
+                        {prettyValue(value)}
+                      </dd>
+                    </div>
                   ))}
-                </p>
-                <p className="mt-1 text-xs text-zinc-500">214 verified reviews</p>
-              </div>
-              <div className="flex-1 text-sm text-zinc-600">
-                <p className="font-medium text-zinc-900">
-                  Loved by customers across Pakistan
-                </p>
-                <p className="mt-1">
-                  Written reviews load on this template. Share your experience
-                  with us on WhatsApp when your order arrives.
-                </p>
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700"
-                >
-                  <MessagesSquare className="size-4" />
-                  Leave a review on WhatsApp
-                </a>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+                </dl>
+              </TabsContent>
+            )}
+
+            {hasReviews && (
+              <TabsContent
+                value="reviews"
+                className="mt-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
+              >
+                <div className="flex flex-wrap items-center gap-6">
+                  <div className="text-center">
+                    <p className="text-5xl font-extrabold text-zinc-900">4.9</p>
+                    <p className="mt-1 flex items-center justify-center gap-0.5 text-amber-500">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <Star key={index} className="size-4 fill-current" />
+                      ))}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">214 verified reviews</p>
+                  </div>
+                  <div className="flex-1 text-sm text-zinc-600">
+                    <p className="font-medium text-zinc-900">
+                      Loved by customers across Pakistan
+                    </p>
+                    <p className="mt-1">
+                      Written reviews load on this template. Share your experience
+                      with us on WhatsApp when your order arrives.
+                    </p>
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+                    >
+                      <MessagesSquare className="size-4" />
+                      Leave a review on WhatsApp
+                    </a>
+                  </div>
+                </div>
+              </TabsContent>
+            )}
+          </Tabs>
+        </div>
+      )}
 
       {/* Related products */}
       {related.length > 0 && (

@@ -24,7 +24,7 @@ export function ProductGrid({
             {categoryName}
           </h2>
           <p className="mt-1 text-sm text-zinc-500">
-            {products.length} of {total} products — nationwide COD.
+            {products.length} of {total} products — nationwide delivery.
           </p>
         </div>
       </div>
