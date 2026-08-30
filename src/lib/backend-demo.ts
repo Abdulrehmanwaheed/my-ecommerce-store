@@ -317,6 +317,8 @@ let subtotal = 0;
       id: crypto.randomUUID(),
       full_name: input.customer_name.trim(),
       phone_whatsapp: input.phone_whatsapp.trim(),
+      email: null,
+      auth_user_id: null,
       city: input.city ?? null,
       address: input.address ?? null,
       created_at: new Date().toISOString(),

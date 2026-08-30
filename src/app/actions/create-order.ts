@@ -97,27 +97,46 @@ export async function createOrder(
       subtotal >= shipping.freeShippingThreshold ? 0 : shipping.flatRateFee;
     const totalAmount = subtotal + shippingFee;
 
-    const { data: customer, error: customerError } = await supabase
-      .from('customers')
-      .upsert(
-        {
+    let customerId = input.customer_id ?? null;
+
+    // For guest checkout, upsert a customer by phone as before.
+    // For signed-up customers, keep using their existing customer row.
+    if (!customerId) {
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .upsert(
+          {
+            full_name: input.customer_name.trim(),
+            phone_whatsapp: input.phone_whatsapp.trim(),
+            city: input.city ?? null,
+            address: input.address ?? null,
+          },
+          { onConflict: 'phone_whatsapp' },
+        )
+        .select('id')
+        .single();
+
+      if (customerError) {
+        throw new Error(`Failed to save customer: ${customerError.message}`);
+      }
+      customerId = customer.id;
+    } else {
+      // Update the signed-up customer's details (latest order info) only if
+      // they are placing on their own account. Use admin to bypass RLS.
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      await createAdminClient()
+        .from('customers')
+        .upsert({
+          id: customerId,
           full_name: input.customer_name.trim(),
-          phone_whatsapp: input.phone_whatsapp.trim(),
           city: input.city ?? null,
           address: input.address ?? null,
-        },
-        { onConflict: 'phone_whatsapp' },
-      )
-      .select('id')
-      .single();
-
-    if (customerError) {
-      throw new Error(`Failed to save customer: ${customerError.message}`);
+        });
     }
 
     const { data: orderData, error: rpcError } = await supabase
       .rpc('create_order_with_stock_update', {
-        p_customer_id: customer.id,
+        p_customer_id: customerId,
         p_customer_name: input.customer_name.trim(),
         p_phone_whatsapp: input.phone_whatsapp.trim(),
         p_city: input.city ?? null,

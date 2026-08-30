@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { STORE_CONFIG } from '@/store.config';
 import { fetchAllCategories } from '@/lib/backend-demo';
+import { Providers } from '@/components/providers';
 import { AnnouncementBar } from '@/components/layout/AnnouncementBar';
 import { Navbar, type NavCategory } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -47,11 +48,13 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-zinc-50 font-sans antialiased">
-        <AnnouncementBar />
-        <Navbar categories={categories} />
-        {children}
-        <Footer categories={categories} />
-        <FloatingWhatsApp />
+        <Providers>
+          <AnnouncementBar />
+          <Navbar categories={categories} />
+          {children}
+          <Footer categories={categories} />
+          <FloatingWhatsApp />
+        </Providers>
       </body>
     </html>
   );

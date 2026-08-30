@@ -2,7 +2,19 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Banknote, CreditCard, Loader2, ShoppingBag, Truck } from 'lucide-react';
+import {
+  ArrowLeft,
+  Banknote,
+  Check,
+  CreditCard,
+  Loader2,
+  MapPin,
+  Plus,
+  ShoppingBag,
+  Star,
+  Truck,
+  UserRound,
+} from 'lucide-react';
 
 import { STORE_CONFIG } from '@/store.config';
 import {
@@ -10,9 +22,11 @@ import {
   unitPriceOf,
   useCartStore,
 } from '@/lib/cart-store';
+import { useAuth } from '@/lib/auth-context';
 import { formatPrice } from '@/lib/format';
 import { createOrder, type CreateOrderResult } from '@/app/actions/create-order';
-import type { PaymentMethod } from '@/types/database';
+import { addAddressAction, setDefaultAddressAction } from '@/app/actions/auth';
+import type { CustomerAddress, PaymentMethod } from '@/types/database';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,6 +53,8 @@ export function CheckoutForm() {
   const clearCart = useCartStore((s) => s.clearCart);
   const subtotal = useCartStore(selectSubtotal);
 
+  const { user, loading: authLoading, profile, addresses, refreshAddresses } = useAuth();
+
   const [mounted, setMounted] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
@@ -47,6 +63,18 @@ export function CheckoutForm() {
   const [address, setAddress] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Address book state (signed-up customers)
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [addingAddress, setAddingAddress] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [newCity, setNewCity] = useState('');
+  const [newAddress, setNewAddress] = useState('');
+  const [newMakeDefault, setNewMakeDefault] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
   const { cod, cardPayment } = STORE_CONFIG.paymentMethods;
   const paymentOptions = useMemo<PaymentOption[]>(
@@ -76,6 +104,32 @@ export function CheckoutForm() {
     setPaymentMethod(fallback);
   }, [paymentOptions]);
 
+  // Pre-fill from the logged-in customer's default address.
+  useEffect(() => {
+    if (!mounted || !user) return;
+    const defaultAddr =
+      addresses.find((a) => a.is_default) ?? addresses[0] ?? null;
+    if (defaultAddr) {
+      applyAddress(defaultAddr);
+      setSelectedAddressId(defaultAddr.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, user, addresses.length]);
+
+  function applyAddress(addr: CustomerAddress) {
+    setCustomerName(addr.full_name ?? profile?.full_name ?? '');
+    setPhone(addr.phone_whatsapp ?? '');
+    setCity(addr.city ?? '');
+    setAddress(addr.address ?? '');
+    setPhoneError(null);
+  }
+
+  function selectSavedAddress(addr: CustomerAddress) {
+    setSelectedAddressId(addr.id);
+    setAddingAddress(false);
+    applyAddress(addr);
+  }
+
   const shippingFee =
     subtotal >= STORE_CONFIG.shipping.freeShippingThreshold ? 0 : STORE_CONFIG.shipping.flatRateFee;
   const totalPayable = subtotal + shippingFee;
@@ -83,6 +137,69 @@ export function CheckoutForm() {
   function validatePhone(raw: string): boolean {
     const digits = raw.replace(/[\s-]/g, '');
     return /^03\d{9}$/.test(digits);
+  }
+
+  async function handleSaveNewAddress() {
+    setAddressError(null);
+    if (!newName.trim()) {
+      setAddressError('Please enter a name for this address.');
+      return;
+    }
+    if (!validatePhone(newPhone)) {
+      setAddressError('Enter a valid 11-digit WhatsApp number, e.g. 03001234567');
+      return;
+    }
+    if (!newCity) {
+      setAddressError('Please select a city.');
+      return;
+    }
+    if (!newAddress.trim()) {
+      setAddressError('Please enter your delivery address.');
+      return;
+    }
+
+    setSavingAddress(true);
+    const result = await addAddressAction({
+      full_name: newName,
+      phone_whatsapp: newPhone.replace(/[\s-]/g, ''),
+      city: newCity,
+      address: newAddress,
+      makeDefault: newMakeDefault,
+    });
+    setSavingAddress(false);
+
+    if (!result.success) {
+      setAddressError(result.error ?? 'Could not save address.');
+      return;
+    }
+
+    await refreshAddresses();
+    // Apply the newly saved address to the order form.
+    setCustomerName(newName);
+    setPhone(newPhone.replace(/[\s-]/g, ''));
+    setCity(newCity);
+    setAddress(newAddress);
+    setPhoneError(null);
+    setAddingAddress(false);
+    setNewName('');
+    setNewPhone('');
+    setNewCity('');
+    setNewAddress('');
+    setNewMakeDefault(false);
+    setSelectedAddressId(null);
+  }
+
+  async function handleSetDefault(addrId: string) {
+    if (settingDefaultId) return;
+    setSettingDefaultId(addrId);
+    const result = await setDefaultAddressAction(addrId);
+    setSettingDefaultId(null);
+    if (result.success) {
+      await refreshAddresses();
+      // Keep the currently-selected address selected for this order.
+    } else {
+      setError(result.error ?? 'Could not update default address.');
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -114,6 +231,7 @@ export function CheckoutForm() {
         city,
         address: address.trim(),
         payment_method: paymentMethod,
+        customer_id: user ? (profile?.id ?? null) : null,
         items: items.map((item) => ({
           product_id: item.product.id,
           quantity: item.quantity,
@@ -180,12 +298,196 @@ export function CheckoutForm() {
     );
   }
 
+  const isSignedIn = Boolean(user);
+
   return (
     <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_24rem]">
       {/* Left — form */}
       <div className="space-y-8">
+        {/* Signed-in address book */}
+        {isSignedIn && !authLoading && (
+          <section className="rounded-3xl border border-border/60 bg-card p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-base font-semibold">
+                <MapPin className="size-4 text-primary" />
+                Saved Addresses
+              </h2>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl"
+                onClick={() => {
+                  setAddingAddress((a) => !a);
+                  setAddressError(null);
+                }}
+              >
+                <Plus className="size-3.5" />
+                Add address
+              </Button>
+            </div>
+
+            {addresses.length > 0 && !addingAddress && (
+              <ul className="mt-4 space-y-2.5">
+                {addresses.map((addr) => (
+                  <li
+                    key={addr.id}
+                    className={`rounded-2xl border p-3.5 transition-all ${
+                      selectedAddressId === addr.id
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                        : 'border-border/60'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => selectSavedAddress(addr)}
+                      className="flex w-full items-start gap-3 text-left"
+                    >
+                      <span
+                        className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border-2 transition-colors ${
+                          selectedAddressId === addr.id
+                            ? 'border-primary'
+                            : 'border-muted-foreground/40'
+                        }`}
+                      >
+                        {selectedAddressId === addr.id && (
+                          <Check className="size-3 text-primary" />
+                        )}
+                      </span>
+                      <span className="flex-1">
+                        <span className="flex items-center gap-2 text-sm font-medium">
+                          {addr.full_name}
+                          {addr.is_default && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              Default
+                            </Badge>
+                          )}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {addr.phone_whatsapp}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {addr.address}
+                          {addr.city ? `, ${addr.city}` : ''}
+                        </span>
+                      </span>
+                    </button>
+                    {!addr.is_default && (
+                      <button
+                        type="button"
+                        onClick={() => handleSetDefault(addr.id)}
+                        disabled={Boolean(settingDefaultId)}
+                        className="ml-8 mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary disabled:opacity-60"
+                      >
+                        {settingDefaultId === addr.id ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          <Star className="size-3" />
+                        )}
+                        Set as default
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {addingAddress && (
+              <div className="mt-4 rounded-2xl border border-border/60 bg-muted/30 p-4">
+                <p className="mb-3 text-xs font-semibold text-muted-foreground">
+                  Add a new delivery address
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <Input
+                      placeholder="Full name"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Input
+                      placeholder="WhatsApp number (03XX XXXXXXX)"
+                      inputMode="tel"
+                      value={newPhone}
+                      onChange={(e) => setNewPhone(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Select value={newCity} onValueChange={(v) => setNewCity(v ?? '')}>
+                      <SelectTrigger className="w-full" data-placeholder>
+                        <SelectValue placeholder="City" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STORE_CONFIG.shipping.cities.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Input
+                      placeholder="Address"
+                      value={newAddress}
+                      onChange={(e) => setNewAddress(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <label className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={newMakeDefault}
+                    onChange={(e) => setNewMakeDefault(e.target.checked)}
+                    className="size-4 accent-primary"
+                  />
+                  Set as my default address
+                </label>
+                {addressError && (
+                  <p className="mt-2 text-xs text-destructive">{addressError}</p>
+                )}
+                <div className="mt-3 flex items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => setAddingAddress(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={handleSaveNewAddress}
+                    disabled={savingAddress}
+                  >
+                    {savingAddress ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      'Save address'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Guest / manual shipping details */}
         <section className="rounded-3xl border border-border/60 bg-card p-6">
-          <h2 className="text-base font-semibold">Shipping Details</h2>
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            {isSignedIn ? (
+              <>
+                <UserRound className="size-4 text-primary" />
+                Delivery Details
+              </>
+            ) : (
+              'Shipping Details'
+            )}
+          </h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label htmlFor="full-name" className="mb-1.5 block text-xs font-medium text-muted-foreground">

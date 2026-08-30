@@ -110,13 +110,13 @@ export function CartDrawer() {
         ) : (
           <>
             <div className="border-b border-zinc-200/80 bg-white px-4 py-3">
-              <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                <span className={remainingForFree > 0 ? '' : 'font-semibold text-emerald-600'}>
+              <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500">
+                <span className={`shrink leading-snug ${remainingForFree > 0 ? '' : 'font-semibold text-emerald-600'}`}>
                   {remainingForFree > 0
                     ? `Add ${formatPrice(remainingForFree)} more for FREE Shipping!`
                     : '🎉 Free Shipping unlocked!'}
                 </span>
-                <span>{count} item{count === 1 ? '' : 's'}</span>
+                <span className="shrink-0">{count} item{count === 1 ? '' : 's'}</span>
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-100">
                 <div

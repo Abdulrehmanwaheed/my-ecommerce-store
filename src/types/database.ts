@@ -32,8 +32,21 @@ export interface Customer {
   id: string;
   full_name: string;
   phone_whatsapp: string | null;
+  email: string | null;
+  auth_user_id: string | null;
   city: string | null;
   address: string | null;
+  created_at: string;
+}
+
+export interface CustomerAddress {
+  id: string;
+  customer_id: string;
+  full_name: string;
+  phone_whatsapp: string;
+  city: string | null;
+  address: string | null;
+  is_default: boolean;
   created_at: string;
 }
 
@@ -91,6 +104,7 @@ export interface CreateOrderInput {
   payment_method: PaymentMethod;
   items: CartItemInput[];
   notes?: string | null;
+  customer_id?: string | null;
 }
 
 export interface CreateProductInput {
