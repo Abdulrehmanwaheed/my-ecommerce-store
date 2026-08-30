@@ -184,7 +184,7 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
 
 export async function fetchOrderById(
   id: string,
-): Promise<{ order: Order; items: OrderItem[] } | null> {
+): Promise<{ order: Order; items: (OrderItem & { product_title?: string; product_images?: string[] })[] } | null> {
   if (isSupabaseConfigured()) {
     const { createAdminClient } = await import('./supabase/admin');
     const supabase = createAdminClient();
@@ -208,12 +208,41 @@ export async function fetchOrderById(
       return null;
     }
 
-    return { order: order as Order, items: (items ?? []) as OrderItem[] };
+    const productIds = (items ?? [])
+      .map((i) => i.product_id)
+      .filter((id): id is string => Boolean(id));
+
+    const { data: products } = await supabase
+      .from('products')
+      .select('id, title, images')
+      .in('id', productIds);
+
+    const productMap = new Map((products ?? []).map((p) => [p.id, p]));
+
+    const enrichedItems = (items ?? []).map((item) => {
+      const product = item.product_id ? productMap.get(item.product_id) : undefined;
+      return {
+        ...item,
+        product_title: product?.title,
+        product_images: product?.images,
+      };
+    });
+
+    return { order: order as Order, items: enrichedItems };
   }
   warnMockFallback('fetchOrderById');
   const order = mockOrders.find((o) => o.id === id);
   if (!order) return null;
-  return { order, items: mockOrderItems.filter((i) => i.order_id === id) };
+  const items = mockOrderItems.filter((i) => i.order_id === id);
+  const enrichedItems = items.map((item) => {
+    const product = runtimeProducts.find((p) => p.id === item.product_id);
+    return {
+      ...item,
+      product_title: product?.title,
+      product_images: product?.images,
+    };
+  });
+  return { order, items: enrichedItems };
 }
 
 export interface CreateOrderDemoResult {

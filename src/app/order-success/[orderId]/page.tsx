@@ -26,9 +26,10 @@ export async function generateMetadata({
   };
 }
 
-function titleFor(productId: string | null, index: number): string {
-  if (!productId) return `Item ${index + 1}`;
-  const match = DEMO_PRODUCTS.find((p) => p.id === productId);
+function titleFor(item: { product_id: string | null; product_title?: string }, index: number): string {
+  if (item.product_title) return item.product_title;
+  if (!item.product_id) return `Item ${index + 1}`;
+  const match = DEMO_PRODUCTS.find((p) => p.id === item.product_id);
   return match?.title ?? `Item ${index + 1}`;
 }
 
@@ -156,9 +157,17 @@ export default async function OrderSuccessPage({
           <ul className="mt-3 space-y-2.5">
             {items.map((item, index) => (
               <li key={item.id}>
-                <div className="flex items-baseline justify-between gap-4 text-sm">
-                  <span className="text-white/85">
-                    {item.quantity} × {titleFor(item.product_id, index)}
+                <div className="flex items-center gap-3 text-sm">
+                  {item.product_images?.[0] && (
+                    <img
+                      src={item.product_images[0]}
+                      alt={titleFor(item, index)}
+                      className="size-12 shrink-0 rounded-xl object-cover"
+                    />
+                  )}
+                  <div className="flex flex-1 items-baseline justify-between gap-4">
+                    <span className="text-white/85">
+                      {item.quantity} × {titleFor(item, index)}
                     {item.is_customized && (
                       <span className="ml-2 rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
                         ✨ Customized
@@ -167,7 +176,8 @@ export default async function OrderSuccessPage({
                   </span>
                   <span className="font-mono text-xs tabular-nums text-white/90">
                     {formatPrice(item.unit_price * item.quantity)}
-                  </span>
+                   </span>
+                  </div>
                 </div>
                 {item.is_customized && (
                   <div className="mt-1.5 rounded-xl bg-white/5 px-3 py-2 text-xs text-white/60">

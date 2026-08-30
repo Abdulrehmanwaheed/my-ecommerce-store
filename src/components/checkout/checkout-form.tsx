@@ -301,19 +301,28 @@ export function CheckoutForm() {
           {items.map((item) => (
             <li
               key={item.key}
-              className="flex items-start justify-between gap-3 text-sm"
+              className="flex items-center gap-3 text-sm"
             >
-              <span className="text-muted-foreground">
-                {item.quantity} × {item.product.title}
-                {item.isCustomized && (
-                  <span className="ml-1.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
-                    ✨ Customized
-                  </span>
-                )}
-              </span>
-              <span className="font-medium tabular-nums">
-                {formatPrice(unitPriceOf(item) * item.quantity)}
-              </span>
+              {item.product.images?.[0] && (
+                <img
+                  src={item.product.images[0]}
+                  alt={item.product.title}
+                  className="size-12 shrink-0 rounded-xl object-cover"
+                />
+              )}
+              <div className="flex flex-1 items-start justify-between gap-2">
+                <span className="text-muted-foreground">
+                  {item.quantity} × {item.product.title}
+                  {item.isCustomized && (
+                    <span className="ml-1.5 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                      ✨ Customized
+                    </span>
+                  )}
+                </span>
+                <span className="shrink-0 font-medium tabular-nums">
+                  {formatPrice(unitPriceOf(item) * item.quantity)}
+                </span>
+              </div>
             </li>
           ))}
         </ul>
