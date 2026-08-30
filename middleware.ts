@@ -1,4 +1,3 @@
-import { createHash, timingSafeEqual } from 'crypto';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -8,16 +7,29 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const ADMIN_SESSION_COOKIE = 'admin_session';
 const ADMIN_LOGIN_PATH = '/admin/login';
 
-function hash(value: string): Buffer {
-  return createHash('sha256').update(value).digest();
+async function sha256Hex(value: string): Promise<string> {
+  const data = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
-function isAdminSessionValid(token: string | undefined): boolean {
+// Constant-time comparison over the hex digests, safe for Edge runtime.
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+async function isAdminSessionValid(token: string | undefined): Promise<boolean> {
   const secret = process.env.ADMIN_SESSION_SECRET;
   if (!token || !secret) return false;
-  const a = hash(secret);
-  const b = hash(token);
-  return a.length === b.length && timingSafeEqual(a, b);
+  const [a, b] = await Promise.all([sha256Hex(secret), sha256Hex(token)]);
+  return safeEqual(a, b);
 }
 
 export async function updateSession(request: NextRequest) {
@@ -27,7 +39,10 @@ export async function updateSession(request: NextRequest) {
 
   // Gate admin routes: only the login page is reachable without a session.
   if (pathname.startsWith('/admin') && pathname !== ADMIN_LOGIN_PATH) {
-    if (!isAdminSessionValid(request.cookies.get(ADMIN_SESSION_COOKIE)?.value)) {
+    const cookieValid = await isAdminSessionValid(
+      request.cookies.get(ADMIN_SESSION_COOKIE)?.value,
+    );
+    if (!cookieValid) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = ADMIN_LOGIN_PATH;
       loginUrl.searchParams.set('redirect', pathname);
