@@ -7,7 +7,8 @@
 
 ALTER TABLE products
     ADD COLUMN IF NOT EXISTS allow_customization BOOLEAN NOT NULL DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS custom_price NUMERIC(12, 2) CHECK (custom_price >= 0);
+    ADD COLUMN IF NOT EXISTS custom_price NUMERIC(12, 2) CHECK (custom_price >= 0),
+    ADD COLUMN IF NOT EXISTS design_images TEXT[] NOT NULL DEFAULT '{}';
 
 ALTER TABLE order_items
     ADD COLUMN IF NOT EXISTS is_customized BOOLEAN NOT NULL DEFAULT FALSE,

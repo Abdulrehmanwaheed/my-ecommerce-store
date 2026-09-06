@@ -93,6 +93,15 @@ export async function createOrder(
       };
     });
 
+    const hasCustomizedItems = items.some((item) => item.is_customized);
+
+    if (hasCustomizedItems && input.payment_method !== 'ONLINE_CARD') {
+      return { success: false, error: 'Orders with customized items must be paid online.' };
+    }
+    if (!hasCustomizedItems && input.payment_method !== 'COD') {
+      return { success: false, error: 'Online payment is only available for customized items. Please use Cash on Delivery.' };
+    }
+
     const shippingFee = shipping.flatRateFee;
     const totalAmount = subtotal + shippingFee;
 

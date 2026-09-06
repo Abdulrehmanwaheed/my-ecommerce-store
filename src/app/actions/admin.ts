@@ -5,6 +5,7 @@ import {
   adminCreateProduct,
   adminDeleteProduct,
   adminUpdateProduct,
+  updateOrdersStatus as demoUpdateOrdersStatus,
   updateOrderStatus as demoUpdateOrderStatus,
 } from '@/lib/backend-demo';
 import type { CreateProductInput, OrderStatus } from '@/types/database';
@@ -26,6 +27,22 @@ export async function updateOrderStatusAction(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Update failed.',
+    };
+  }
+}
+
+export async function updateOrdersStatusAction(
+  orderIds: string[],
+  orderStatus: OrderStatus,
+): Promise<AdminActionResult> {
+  try {
+    return await demoUpdateOrdersStatus(orderIds, orderStatus);
+  } catch (error) {
+    console.error('[admin] bulk order status update failed:', error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Bulk update failed.',
     };
   }
 }

@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ZoomIn } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 
 import type { Product } from '@/types/database';
 
@@ -26,6 +26,25 @@ export function ImageViewer({ product }: { product: Product }) {
   const [zoomed, setZoomed] = useState(false);
   const [origin, setOrigin] = useState('50% 50%');
   const [failed, setFailed] = useState<Record<string, boolean>>({});
+  const [paused, setPaused] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const autoPlay = views.length >= 3;
+
+  useEffect(() => {
+    if (!autoPlay || paused) return;
+    timerRef.current = setInterval(() => {
+      setActive((prev) => (prev + 1) % views.length);
+    }, 3500);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [autoPlay, paused, views.length]);
+
+  function goTo(index: number) {
+    const size = views.length;
+    setActive(((index % size) + size) % size);
+  }
 
   const activeView = views[active]?.src;
   const activeFailed = activeView ? Boolean(failed[activeView]) : false;
@@ -41,8 +60,16 @@ export function ImageViewer({ product }: { product: Product }) {
     <div className="space-y-3">
       <div
         className="group relative aspect-square cursor-zoom-in overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-primary/20 via-muted to-muted"
-        onMouseEnter={() => activeView && setZoomed(true)}
-        onMouseLeave={() => setZoomed(false)}
+        onMouseEnter={() => {
+          if (activeView) {
+            setZoomed(true);
+            setPaused(true);
+          }
+        }}
+        onMouseLeave={() => {
+          setZoomed(false);
+          setPaused(false);
+        }}
         onMouseMove={handleMove}
       >
         {activeView && !activeFailed ? (
@@ -75,6 +102,51 @@ export function ImageViewer({ product }: { product: Product }) {
         <div className="pointer-events-none absolute top-3 right-3 rounded-full bg-background/70 p-1.5 backdrop-blur">
           <ZoomIn className="size-3.5 text-muted-foreground" />
         </div>
+
+        {autoPlay && (
+          <>
+            <button
+              type="button"
+              aria-label="Previous image"
+              onClick={(e) => {
+                e.stopPropagation();
+                goTo(active - 1);
+              }}
+              className="absolute top-1/2 left-3 grid size-9 -translate-y-1/2 place-items-center rounded-full border border-border/60 bg-background/70 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity group-hover:opacity-100 hover:bg-background"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <button
+              type="button"
+              aria-label="Next image"
+              onClick={(e) => {
+                e.stopPropagation();
+                goTo(active + 1);
+              }}
+              className="absolute top-1/2 right-3 grid size-9 -translate-y-1/2 place-items-center rounded-full border border-border/60 bg-background/70 text-foreground opacity-0 shadow-sm backdrop-blur transition-opacity group-hover:opacity-100 hover:bg-background"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+              {views.map((_v, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  aria-label={`Go to image ${index + 1}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goTo(index);
+                  }}
+                  className={`h-1.5 rounded-full transition-all ${
+                    active === index
+                      ? 'w-5 bg-primary'
+                      : 'w-1.5 bg-foreground/30 hover:bg-foreground/50'
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex gap-2.5">

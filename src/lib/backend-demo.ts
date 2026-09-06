@@ -49,6 +49,7 @@ export const DEMO_PRODUCTS: Product[] = [
     is_featured: true,
     allow_customization: false,
     custom_price: null,
+    design_images: [],
     created_at: new Date().toISOString(),
   },
   {
@@ -65,6 +66,7 @@ export const DEMO_PRODUCTS: Product[] = [
     is_featured: true,
     allow_customization: false,
     custom_price: null,
+    design_images: [],
     created_at: new Date().toISOString(),
   },
   {
@@ -81,6 +83,7 @@ export const DEMO_PRODUCTS: Product[] = [
     is_featured: false,
     allow_customization: false,
     custom_price: null,
+    design_images: [],
     created_at: new Date().toISOString(),
   },
   {
@@ -97,6 +100,7 @@ export const DEMO_PRODUCTS: Product[] = [
     is_featured: true,
     allow_customization: false,
     custom_price: null,
+    design_images: [],
     created_at: new Date().toISOString(),
   },
   {
@@ -113,6 +117,7 @@ export const DEMO_PRODUCTS: Product[] = [
     is_featured: false,
     allow_customization: false,
     custom_price: null,
+    design_images: [],
     created_at: new Date().toISOString(),
   },
   {
@@ -129,6 +134,10 @@ id: 'demo-prod-006',
     is_featured: false,
     allow_customization: true,
     custom_price: 7200,
+    design_images: [
+      'https://picsum.photos/seed/bag-design-1/600/600',
+      'https://picsum.photos/seed/bag-design-2/600/600',
+    ],
     created_at: new Date().toISOString(),
   },
 ];
@@ -318,6 +327,15 @@ let subtotal = 0;
       custom_notes: isCustomized ? (item.custom_notes ?? null) : null,
       custom_images: isCustomized ? (item.custom_images ?? []) : [],
     });
+}
+
+  const hasCustomizedItems = items.some((item) => item.is_customized);
+
+  if (hasCustomizedItems && input.payment_method !== 'ONLINE_CARD') {
+    return { success: false, error: 'Orders with customized items must be paid online.' };
+  }
+  if (!hasCustomizedItems && input.payment_method !== 'COD') {
+    return { success: false, error: 'Online payment is only available for customized items. Please use Cash on Delivery.' };
   }
 
   const shippingFee = shipping.flatRateFee;
@@ -513,6 +531,43 @@ export async function updateOrderStatus(
   return { success: true, id: order.id };
 }
 
+export async function updateOrdersStatus(
+  orderIds: string[],
+  orderStatus: OrderStatus,
+): Promise<AdminResult> {
+  if (!VALID_ORDER_STATUSES.includes(orderStatus)) {
+    return { success: false, error: `Invalid order status: ${orderStatus}` };
+  }
+  if (orderIds.length === 0) {
+    return { success: false, error: 'No orders were selected.' };
+  }
+
+  if (isSupabaseConfigured()) {
+    const { createAdminClient } = await import('./supabase/admin');
+    const { error } = await createAdminClient()
+      .from('orders')
+      .update({ order_status: orderStatus })
+      .in('id', orderIds);
+    if (error) {
+      return {
+        success: false,
+        error: `Failed to update orders: ${error.message}`,
+      };
+    }
+    return { success: true };
+  }
+
+  let updated = 0;
+  for (const orderId of orderIds) {
+    const order = mockOrders.find((o) => o.id === orderId);
+    if (!order) continue;
+    order.order_status = orderStatus;
+    updated += 1;
+  }
+  if (updated === 0) return { success: false, error: 'No matching orders found' };
+  return { success: true, id: String(updated) };
+}
+
 export async function adminCreateProduct(
   input: CreateProductInput,
 ): Promise<AdminResult> {
@@ -549,6 +604,7 @@ export async function adminCreateProduct(
         is_featured: input.is_featured ?? false,
         allow_customization: input.allow_customization ?? false,
         custom_price: input.custom_price ?? null,
+        design_images: input.design_images ?? [],
       })
       .select('id')
       .single();
@@ -573,6 +629,7 @@ export async function adminCreateProduct(
     is_featured: input.is_featured ?? false,
     allow_customization: input.allow_customization ?? false,
     custom_price: input.custom_price ?? null,
+    design_images: input.design_images ?? [],
     created_at: new Date().toISOString(),
   };
   runtimeProducts.unshift(product);
@@ -617,6 +674,7 @@ export async function adminUpdateProduct(
         is_featured: input.is_featured ?? false,
         allow_customization: input.allow_customization ?? false,
         custom_price: input.custom_price ?? null,
+        design_images: input.design_images ?? [],
       })
       .eq('id', productId)
       .select('id')
@@ -645,6 +703,7 @@ export async function adminUpdateProduct(
     is_featured: input.is_featured ?? false,
     allow_customization: input.allow_customization ?? false,
     custom_price: input.custom_price ?? null,
+    design_images: input.design_images ?? [],
   };
   return { success: true, id: productId };
 }

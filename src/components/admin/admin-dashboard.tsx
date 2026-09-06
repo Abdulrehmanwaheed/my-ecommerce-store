@@ -1,12 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  Check,
   HandCoins,
   Eye,
   Loader2,
   LogOut,
+  MessageCircle,
   PackagePlus,
   Pencil,
   Plus,
@@ -20,11 +22,16 @@ import {
 } from 'lucide-react';
 
 import { formatPrice } from '@/lib/format';
+import {
+  buildShippedMessage,
+  buildShippedWhatsAppUrl,
+} from '@/lib/shipped-notification';
 import { isSupabaseConfigured } from '@/lib/backend-demo';
 import {
   createCategoryAction,
   createProductAction,
   deleteProductAction,
+  updateOrdersStatusAction,
   updateOrderStatusAction,
   updateProductAction,
 } from '@/app/actions/admin';
@@ -63,6 +70,20 @@ import {
 interface AttributeRow {
   key: string;
   value: string;
+}
+
+const ORDER_STATUS_LIST: OrderStatus[] = [
+  'Pending',
+  'Processing',
+  'Shipped',
+  'Delivered',
+  'Cancelled',
+];
+
+interface ShippedNotif {
+  order: Order;
+  message: string;
+  waLink: string;
 }
 
 function parseAttributeValue(raw: string): unknown {
@@ -109,6 +130,12 @@ export function AdminDashboard({
   const defaultCategory = categories[0]?.slug ?? '';
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('Pending');
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<OrderStatus>('Processing');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [shippedNotifs, setShippedNotifs] = useState<ShippedNotif[]>([]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -134,6 +161,9 @@ export function AdminDashboard({
   const [imagesText, setImagesText] = useState('');
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [designImagesText, setDesignImagesText] = useState('');
+  const [uploadingDesignImages, setUploadingDesignImages] = useState(false);
+  const [designUploadError, setDesignUploadError] = useState<string | null>(null);
   const [attributes, setAttributes] = useState<AttributeRow[]>([
     { key: '', value: '' },
   ]);
@@ -163,11 +193,22 @@ export function AdminDashboard({
   }, [products]);
 
   const visibleOrders = useMemo(() => {
-    if (orderTab === 'normal') return orders;
-    return orders.filter((order) =>
-      (itemsByOrder.get(order.id) ?? []).some((item) => item.is_customized),
-    );
-  }, [orders, orderItems, orderTab, itemsByOrder]);
+    const base =
+      orderTab === 'normal'
+        ? orders
+        : orders.filter((order) =>
+            (itemsByOrder.get(order.id) ?? []).some(
+              (item) => item.is_customized,
+            ),
+          );
+    if (statusFilter === 'all') return base;
+    return base.filter((order) => order.order_status === statusFilter);
+  }, [orders, orderItems, orderTab, itemsByOrder, statusFilter]);
+
+  useEffect(() => {
+    setSelectedOrderIds([]);
+    setBulkError(null);
+  }, [orderTab, statusFilter]);
 
   const selectedOrder = selectedOrderId
     ? (orders.find((o) => o.id === selectedOrderId) ?? null)
@@ -259,6 +300,7 @@ export function AdminDashboard({
     setCustomPrice('');
     setDescription('');
     setImagesText('');
+    setDesignImagesText('');
     setAttributes([{ key: '', value: '' }]);
     setFormError(null);
     setFormSuccess(null);
@@ -291,6 +333,7 @@ export function AdminDashboard({
     );
     setDescription(product.description ?? '');
     setImagesText(product.images.join('\n'));
+    setDesignImagesText((product.design_images ?? []).join('\n'));
     setAttributes(
       Object.keys(product.attributes).length > 0
         ? Object.entries(product.attributes).map(([key, value]) => ({
@@ -320,6 +363,86 @@ export function AdminDashboard({
     if (!result.success) {
       setOrders(previous);
       setStatusError(result.error ?? 'Status update failed.');
+      return;
+    }
+
+    if (nextStatus === 'Shipped') {
+      const order = previous.find((o) => o.id === orderId);
+      if (order) queueShippedNotif(order, true);
+    }
+  }
+
+  function queueShippedNotif(order: Order, autoOpen: boolean) {
+    const items = itemsByOrder.get(order.id) ?? [];
+    const message = buildShippedMessage({
+      order,
+      items,
+      productFor: (productId) => {
+        const product = productsById.get(productId ?? '');
+        return product ? { title: product.title, image: product.images[0] } : null;
+      },
+    });
+    const waLink = buildShippedWhatsAppUrl(order.phone_whatsapp, message);
+    setShippedNotifs((prev) => [
+      ...prev.filter((n) => n.order.id !== order.id),
+      { order, message, waLink },
+    ]);
+    if (autoOpen && typeof window !== 'undefined') {
+      window.open(waLink, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  function toggleOrderSelection(orderId: string) {
+    setBulkError(null);
+    setSelectedOrderIds((prev) =>
+      prev.includes(orderId)
+        ? prev.filter((id) => id !== orderId)
+        : [...prev, orderId],
+    );
+  }
+
+  function toggleSelectAll() {
+    setBulkError(null);
+    setSelectedOrderIds((prev) => {
+      const allVisibleSelected =
+        visibleOrders.length > 0 &&
+        visibleOrders.every((o) => prev.includes(o.id));
+      if (allVisibleSelected) {
+        const visibleIds = new Set(visibleOrders.map((o) => o.id));
+        return prev.filter((id) => !visibleIds.has(id));
+      }
+      const next = new Set(prev);
+      for (const order of visibleOrders) next.add(order.id);
+      return [...next];
+    });
+  }
+
+  async function handleBulkStatusUpdate(e: React.FormEvent) {
+    e.preventDefault();
+    if (selectedOrderIds.length === 0) return;
+    setBulkError(null);
+    setBulkBusy(true);
+    const result = await updateOrdersStatusAction(selectedOrderIds, bulkStatus);
+    setBulkBusy(false);
+    if (!result.success) {
+      setBulkError(result.error ?? 'Bulk update failed.');
+      return;
+    }
+    setOrders((prev) =>
+      prev.map((o) =>
+        selectedOrderIds.includes(o.id) ? { ...o, order_status: bulkStatus } : o,
+      ),
+    );
+    setSelectedOrderIds([]);
+
+    if (bulkStatus === 'Shipped') {
+      for (const order of orders) {
+        if (selectedOrderIds.includes(order.id)) {
+          // no auto-open: browsers block many popups at once, so queue each
+          // with a ready "Send" button instead.
+          queueShippedNotif(order, false);
+        }
+      }
     }
   }
 
@@ -377,6 +500,63 @@ export function AdminDashboard({
     );
   }
 
+  async function handleDesignImageUpload(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    if (files.length === 0) return;
+
+    setDesignUploadError(null);
+    setUploadingDesignImages(true);
+    try {
+      const chunks = [];
+      for (let i = 0; i < files.length; i += 3) {
+        chunks.push(files.slice(i, i + 3));
+      }
+
+      let uploaded: string[] = [];
+      for (const chunk of chunks) {
+        const formData = new FormData();
+        for (const file of chunk) formData.append('files', file);
+        const res = await fetch('/api/uploads', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok || !data.urls) {
+          throw new Error(data.error ?? 'Upload failed.');
+        }
+        uploaded = [...uploaded, ...data.urls];
+      }
+
+      setDesignImagesText((prev) => {
+        const existing =
+          prev
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean) ?? [];
+        return [...existing, ...uploaded].join('\n');
+      });
+    } catch (err) {
+      setDesignUploadError(
+        err instanceof Error ? err.message : 'Upload failed.',
+      );
+    } finally {
+      setUploadingDesignImages(false);
+    }
+  }
+
+  function handleRemoveDesignImage(image: string) {
+    setDesignImagesText((prev) =>
+      prev
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line && line !== image)
+        .join('\n'),
+    );
+  }
+
   async function handleSubmitProduct(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
@@ -405,6 +585,10 @@ export function AdminDashboard({
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean);
+    const designImages = designImagesText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
 
     const slug = title
       .toLowerCase()
@@ -427,6 +611,7 @@ export function AdminDashboard({
         is_featured: featured,
         allow_customization: allowCustomization,
         custom_price: customPriceNum,
+        design_images: designImages,
       };
 
       const result = editingProduct
@@ -456,6 +641,7 @@ export function AdminDashboard({
         is_featured: featured,
         allow_customization: allowCustomization,
         custom_price: customPriceNum,
+        design_images: designImages,
       };
 
       if (editingProduct) {
@@ -594,31 +780,101 @@ export function AdminDashboard({
               {visibleOrders.length} of {orders.length} orders shown.
             </p>
           </div>
-          <div className="flex items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-950 p-1">
-            <button
-              type="button"
-              onClick={() => setOrderTab('normal')}
-              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                orderTab === 'normal'
-                  ? 'bg-zinc-800 text-white'
-                  : 'text-zinc-500 hover:text-zinc-300'
-              }`}
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={statusFilter}
+              onValueChange={(v) =>
+                setStatusFilter((v as OrderStatus | 'all') ?? 'Pending')
+              }
             >
-              📦 Normal Orders
-            </button>
-            <button
-              type="button"
-              onClick={() => setOrderTab('customized')}
-              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                orderTab === 'customized'
-                  ? 'bg-amber-500/15 text-amber-400'
-                  : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              ✨ Customized Orders
-            </button>
+              <SelectTrigger className="h-9 w-40 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                {ORDER_STATUS_LIST.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-950 p-1">
+              <button
+                type="button"
+                onClick={() => setOrderTab('normal')}
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                  orderTab === 'normal'
+                    ? 'bg-zinc-800 text-white'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                📦 Normal Orders
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderTab('customized')}
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                  orderTab === 'customized'
+                    ? 'bg-amber-500/15 text-amber-400'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                ✨ Customized Orders
+              </button>
+            </div>
           </div>
         </div>
+
+        {selectedOrderIds.length > 0 && (
+          <form
+            onSubmit={handleBulkStatusUpdate}
+            className="flex flex-wrap items-center gap-3 border-b border-zinc-800 bg-amber-500/5 px-5 py-3"
+          >
+            <span className="text-xs font-semibold text-amber-400">
+              {selectedOrderIds.length} selected
+            </span>
+            <Select
+              value={bulkStatus}
+              onValueChange={(v) =>
+                setBulkStatus((v as OrderStatus) ?? 'Processing')
+              }
+            >
+              <SelectTrigger className="h-8 w-44 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ORDER_STATUS_LIST.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    Move to {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              type="submit"
+              className="h-8 rounded-lg bg-amber-500 text-zinc-950 hover:bg-amber-400"
+              disabled={bulkBusy}
+            >
+              {bulkBusy ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Check className="size-3.5" />
+              )}
+              Update Status
+            </Button>
+            {bulkError && (
+              <span className="text-xs text-red-400">{bulkError}</span>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelectedOrderIds([])}
+              className="ml-auto text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+            >
+              Clear selection
+            </button>
+          </form>
+        )}
 
         {statusError && (
           <p className="border-b border-zinc-800 bg-red-500/10 px-5 py-2.5 text-xs text-red-400">
@@ -626,10 +882,91 @@ export function AdminDashboard({
           </p>
         )}
 
+        {shippedNotifs.length > 0 && (
+          <div className="border-b border-zinc-800 bg-emerald-500/5 px-5 py-4">
+            <div className="mb-2.5 flex flex-wrap items-center gap-2">
+              <MessageCircle className="size-4 text-emerald-400" />
+              <h3 className="text-xs font-semibold text-emerald-400">
+                Shipped WhatsApp notifications ({shippedNotifs.length})
+              </h3>
+              <span className="text-[11px] text-zinc-500">
+                Open each chat to send, or copy the message to send later.
+              </span>
+            </div>
+            <div className="grid gap-2.5 lg:grid-cols-2">
+              {shippedNotifs.map((n) => (
+                <div
+                  key={n.order.id}
+                  className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-zinc-100">
+                      {n.order.customer_name}
+                      <span className="ml-2 font-mono text-xs text-zinc-500">
+                        #{n.order.order_number}
+                      </span>
+                    </p>
+                    <p className="truncate text-[11px] text-zinc-500 tabular-nums">
+                      {n.order.phone_whatsapp} · {formatPrice(n.order.total_amount)}
+                    </p>
+                  </div>
+                  <a
+                    href={n.waLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() =>
+                      setShippedNotifs((prev) =>
+                        prev.filter((x) => x.order.id !== n.order.id),
+                      )
+                    }
+                    className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-emerald-500"
+                  >
+                    <MessageCircle className="size-3.5" />
+                    Send
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(n.message)}
+                    className="inline-flex h-8 shrink-0 items-center rounded-lg bg-zinc-800 px-3 text-xs font-semibold text-zinc-300 transition-colors hover:bg-zinc-700"
+                  >
+                    Copy
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Dismiss notification"
+                    onClick={() =>
+                      setShippedNotifs((prev) =>
+                        prev.filter((x) => x.order.id !== n.order.id),
+                      )
+                    }
+                    className="grid size-8 shrink-0 place-items-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-800 text-[11px] uppercase tracking-widest text-zinc-500">
+                <th className="w-12 px-5 py-3 font-medium">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all visible orders"
+                    checked={
+                      visibleOrders.length > 0 &&
+                      visibleOrders.every((o) =>
+                        selectedOrderIds.includes(o.id),
+                      )
+                    }
+                    onChange={toggleSelectAll}
+                    className="size-4 cursor-pointer accent-amber-500"
+                  />
+                </th>
                 <th className="px-5 py-3 font-medium">Order ID &amp; Date</th>
                 <th className="px-5 py-3 font-medium">Customer</th>
                 <th className="px-5 py-3 font-medium">Total</th>
@@ -641,10 +978,12 @@ export function AdminDashboard({
             <tbody>
               {visibleOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-zinc-500">
+                  <td colSpan={7} className="px-5 py-12 text-center text-zinc-500">
                     {orderTab === 'customized'
                       ? 'No customized orders yet. Custom orders appear here when a customer picks "Customize This Product".'
-                      : 'No orders yet. Place a test order from the storefront.'}
+                      : statusFilter === 'all'
+                        ? 'No orders yet. Place a test order from the storefront.'
+                        : `No ${statusFilter} orders right now. Pick another status from the dropdown, or choose "All statuses".`}
                   </td>
                 </tr>
               ) : (
@@ -657,6 +996,16 @@ export function AdminDashboard({
                       onClick={() => setSelectedOrderId(order.id)}
                       className="cursor-pointer border-b border-zinc-800/70 transition-colors last:border-0 hover:bg-zinc-800/40"
                     >
+                      <td className="px-5 py-3.5">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select order #${order.order_number}`}
+                          checked={selectedOrderIds.includes(order.id)}
+                          onChange={() => toggleOrderSelection(order.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="size-4 cursor-pointer accent-amber-500"
+                        />
+                      </td>
                       <td className="px-5 py-3.5">
                         <p className="font-mono text-xs font-semibold text-zinc-200">
                           #{order.order_number}
@@ -1252,6 +1601,73 @@ export function AdminDashboard({
                   Charged when a customer selects &quot;Customize This
                   Product&quot; instead of the standard price.
                 </p>
+              </div>
+            )}
+
+            {allowCustomization && (
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                  Design Images (possible designs)
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-input bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-60">
+                    <Upload className="size-3.5" />
+                    {uploadingDesignImages ? 'Uploading…' : 'Upload designs'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="sr-only"
+                      disabled={uploadingDesignImages}
+                      onChange={handleDesignImageUpload}
+                    />
+                  </label>
+                  <span className="text-xs text-muted-foreground">
+                    Customers pick one from a dropdown. Leave empty to hide the
+                    design picker.
+                  </span>
+                </div>
+                {designUploadError && (
+                  <p className="mt-1.5 text-xs text-destructive">
+                    {designUploadError}
+                  </p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2.5">
+                  {designImagesText
+                    .split('\n')
+                    .map((line) => line.trim())
+                    .filter(Boolean)
+                    .map((url) => (
+                      <div
+                        key={url}
+                        className="group relative size-20 overflow-hidden rounded-xl border border-border/60 bg-zinc-100"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={url}
+                          alt="Design preview"
+                          className="size-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          aria-label="Remove design"
+                          onClick={() => handleRemoveDesignImage(url)}
+                          className="absolute top-1 right-1 grid size-5 place-items-center rounded-full bg-zinc-900/70 text-white opacity-0 transition-opacity hover:bg-red-600 group-hover:opacity-100"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
+                    ))}
+                  {designImagesText
+                    .split('\n')
+                    .map((line) => line.trim())
+                    .filter(Boolean).length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No designs yet — upload the design options customers can
+                      choose from.
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 

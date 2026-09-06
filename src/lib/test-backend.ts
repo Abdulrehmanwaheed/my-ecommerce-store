@@ -71,45 +71,63 @@ async function main(): Promise<void> {
   );
   assert(codFetched?.order.shipping_fee === 0, 'COD order got free shipping above threshold');
 
-  const onlineResult = await createOrderDemo({
+  const standardCodResult = await createOrderDemo({
     customer_name: 'Sara Ahmed',
     phone_whatsapp: '03111234567',
     city: 'Lahore',
     address: 'Street 4, DHA',
-    payment_method: 'ONLINE_CARD',
+    payment_method: 'COD',
     items: [{ product_id: 'demo-prod-005', quantity: 3 }],
   });
 
-  assert(onlineResult.success === true, 'Online payment order placement succeeds');
-  assert(onlineResult.requiresPayment === true, 'Online order sets requiresPayment: true');
+  assert(standardCodResult.success === true, 'Standard order using COD succeeds');
   assert(
-    onlineResult.gatewayUrl === `/api/payments/initiate?orderId=${onlineResult.orderId}`,
-    'Online order returns gateway init URL',
+    standardCodResult.redirectUrl === `/order-success/${standardCodResult.orderId}`,
+    'Standard COD order returns correct redirectUrl',
   );
 
-  const onlineFetched = await fetchOrderById(onlineResult.orderId!);
-  assert(onlineFetched !== null, 'Online order retrievable via fetchOrderById');
-  assert(onlineFetched?.order.payment_status === 'Unpaid', 'Online order starts Unpaid');
-  assert(onlineFetched?.order.order_status === 'Pending', 'Online order starts Pending');
-
-  const onlineSubtotal = 2800 * 3; // 8400
+  const standardCodFetched = await fetchOrderById(standardCodResult.orderId!);
+  assert(standardCodFetched !== null, 'Standard COD order retrievable via fetchOrderById');
   assert(
-    onlineFetched?.order.total_amount === onlineSubtotal,
-    'Online order gets free shipping above threshold',
+    standardCodFetched?.order.payment_method === 'COD',
+    'Standard order payment_method is COD',
   );
-  assert(onlineFetched?.order.shipping_fee === 0, 'Online order shipping_fee is 0 above threshold');
+  assert(standardCodFetched?.order.payment_status === 'Unpaid', 'Standard COD order starts Unpaid');
+  assert(standardCodFetched?.order.order_status === 'Pending', 'Standard COD order starts Pending');
 
-  const onlineBelowThreshold = await createOrderDemo({
+  const standardCodSubtotal = 2800 * 3; // 8400
+  assert(
+    standardCodFetched?.order.total_amount === standardCodSubtotal,
+    'Standard COD order gets free shipping above threshold',
+  );
+  assert(
+    standardCodFetched?.order.shipping_fee === 0,
+    'Standard COD order shipping_fee is 0 above threshold',
+  );
+
+  const standardOnlineRejected = await createOrderDemo({
     customer_name: 'Sara Ahmed',
     phone_whatsapp: '03111234567',
     city: 'Lahore',
     payment_method: 'ONLINE_CARD',
+    items: [{ product_id: 'demo-prod-005', quantity: 3 }],
+  });
+  assert(
+    standardOnlineRejected.success === false,
+    'Standard order rejects online payment',
+  );
+
+  const codBelowThreshold = await createOrderDemo({
+    customer_name: 'Sara Ahmed',
+    phone_whatsapp: '03111234567',
+    city: 'Lahore',
+    payment_method: 'COD',
     items: [{ product_id: 'demo-prod-005', quantity: 1 }],
   });
-  const belowFetched = await fetchOrderById(onlineBelowThreshold.orderId!);
+  const belowFetched = await fetchOrderById(codBelowThreshold.orderId!);
   assert(
     belowFetched?.order.total_amount === 2800 + 200,
-    'Online order total includes flat shipping fee below threshold',
+    'COD order total includes flat shipping fee below threshold',
   );
 
   const duplicateCustomer = await createOrderDemo({
@@ -141,7 +159,7 @@ async function main(): Promise<void> {
     phone_whatsapp: '03331234567',
     city: 'Islamabad',
     address: 'House 2, F-10',
-    payment_method: 'COD',
+    payment_method: 'ONLINE_CARD',
     items: [
       {
         product_id: 'demo-prod-006',
@@ -156,6 +174,29 @@ async function main(): Promise<void> {
     ],
   });
   assert(customResult.success === true, 'Customized order placement succeeds');
+  assert(customResult.requiresPayment === true, 'Customized order sets requiresPayment: true');
+  assert(
+    customResult.gatewayUrl === `/api/payments/initiate?orderId=${customResult.orderId}`,
+    'Customized online order returns gateway init URL',
+  );
+
+  const customCodRejected = await createOrderDemo({
+    customer_name: 'Hina Malik',
+    phone_whatsapp: '03331234567',
+    city: 'Islamabad',
+    payment_method: 'COD',
+    items: [
+      {
+        product_id: 'demo-prod-006',
+        quantity: 1,
+        is_customized: true,
+      },
+    ],
+  });
+  assert(
+    customCodRejected.success === false,
+    'Customized order rejects Cash on Delivery',
+  );
 
   const customFetched = await fetchOrderById(customResult.orderId!);
   const customItem = customFetched?.items[0];

@@ -25,6 +25,7 @@ export interface Product {
   is_featured: boolean;
   allow_customization: boolean;
   custom_price: number | null;
+  design_images: string[];
   created_at: string;
 }
 
@@ -120,4 +121,5 @@ export interface CreateProductInput {
   is_featured?: boolean;
   allow_customization?: boolean;
   custom_price?: number | null;
+  design_images?: string[];
 }

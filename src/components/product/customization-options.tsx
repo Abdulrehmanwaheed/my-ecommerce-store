@@ -1,17 +1,16 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  ImagePlus,
-  Loader2,
+  Check,
+  ChevronLeft,
+  ChevronRight,
   MessageCircle,
   Minus,
   Package,
   Plus,
   ShoppingBag,
   Sparkles,
-  Upload,
-  X,
 } from 'lucide-react';
 
 import { STORE_CONFIG } from '@/store.config';
@@ -21,21 +20,48 @@ import type { Product } from '@/types/database';
 
 import { Button } from '@/components/ui/button';
 
-const MAX_FILES = 3;
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-
 type Mode = 'standard' | 'custom';
 
 export function CustomizationOptions({ product }: { product: Product }) {
   const [mode, setMode] = useState<Mode>('standard');
   const [qty, setQty] = useState(1);
   const [notes, setNotes] = useState('');
-  const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
-  const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const designImages = product.design_images ?? [];
+  const [selectedDesignIndex, setSelectedDesignIndex] = useState(
+    designImages.length > 0 ? 0 : -1,
+  );
+  const [hoveredDesignIndex, setHoveredDesignIndex] = useState<number | null>(null);
+  const thumbRowRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  useEffect(() => {
+    updateThumbArrows();
+  }, [designImages.length]);
+
+  useEffect(() => {
+    if (!thumbRowRef.current) return;
+    const el = thumbRowRef.current;
+    el.scrollBy({ left: 80, behavior: 'instant' });
+    el.scrollTo({ left: 0 });
+    updateThumbArrows();
+  }, []);
+
+  function updateThumbArrows() {
+    const el = thumbRowRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(
+      el.scrollLeft < el.scrollWidth - el.clientWidth - 1,
+    );
+  }
+
+  function scrollThumbs(dir: 'left' | 'right') {
+    const el = thumbRowRef.current;
+    if (!el) return;
+    const step = Math.max(el.clientWidth * 0.8, 90);
+    el.scrollBy({ left: dir === 'left' ? -step : step, behavior: 'smooth' });
+  }
 
   const addItem = useCartStore((s) => s.addItem);
   const openDrawer = useCartStore((s) => s.openDrawer);
@@ -44,69 +70,7 @@ export function CustomizationOptions({ product }: { product: Product }) {
   const customPrice = product.custom_price ?? product.price;
   const activePrice = mode === 'custom' ? customPrice : product.price;
   const isCustom = mode === 'custom';
-
-  function handleFiles(selected: FileList | null) {
-    if (!selected) return;
-    setUploadError(null);
-    const incoming = Array.from(selected).filter((file) =>
-      file.type.startsWith('image/'),
-    );
-    if (incoming.length === 0) {
-      setUploadError('Please choose image files only.');
-      return;
-    }
-    const combined = [...files, ...incoming].slice(0, MAX_FILES);
-    if (combined.length < files.length + incoming.length) {
-      setUploadError(`You can upload up to ${MAX_FILES} reference photos.`);
-    }
-    for (const file of incoming) {
-      if (file.size > MAX_FILE_SIZE) {
-        setUploadError(`"${file.name}" exceeds the 5MB limit.`);
-        break;
-      }
-    }
-    setFiles(combined);
-    setPreviews((prev) =>
-      [...prev, ...incoming.map((file) => URL.createObjectURL(file))].slice(
-        0,
-        MAX_FILES,
-      ),
-    );
-  }
-
-  function removeFile(index: number) {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    setPreviews((prev) => {
-      URL.revokeObjectURL(prev[index]);
-      return prev.filter((_, i) => i !== index);
-    });
-  }
-
-  async function handleUpload() {
-    if (files.length === 0) return;
-    setUploading(true);
-    setUploadError(null);
-    try {
-      const formData = new FormData();
-      for (const file of files) formData.append('files', file);
-      const res = await fetch('/api/uploads', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (!res.ok || !data.urls) {
-        setUploadError(data.error ?? 'Upload failed. Please try again.');
-        return;
-      }
-      setUploadedUrls(data.urls);
-      setFiles([]);
-      setPreviews((prev) => {
-        prev.forEach((url) => URL.revokeObjectURL(url));
-        return [];
-      });
-    } catch {
-      setUploadError('Upload failed. Please try again.');
-    } finally {
-      setUploading(false);
-    }
-  }
+  const selectedDesign = designImages[selectedDesignIndex] ?? '';
 
   const whatsappUrl = `https://wa.me/${
     STORE_CONFIG.whatsapp.phoneNumber
@@ -125,8 +89,8 @@ export function CustomizationOptions({ product }: { product: Product }) {
         : isCustom
           ? '📝 Custom instructions: (will share in chat)'
           : null,
-      uploadedUrls.length > 0
-        ? `🖼️ Reference photos:\n${uploadedUrls.join('\n')}`
+      isCustom && selectedDesign
+        ? `🎨 Selected design: ${selectedDesign}`
         : null,
       'Please confirm availability.',
     ]
@@ -264,117 +228,83 @@ export function CustomizationOptions({ product }: { product: Product }) {
             />
           </div>
 
-          {/* Dropzone */}
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
-              Reference Photos (up to {MAX_FILES})
-            </label>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center transition-colors hover:border-amber-400 hover:bg-amber-50/40"
-            >
-              <ImagePlus className="size-6 text-zinc-400" />
-              <span className="text-xs font-medium text-zinc-600">
-                Click to upload or drag &amp; drop
-              </span>
-              <span className="text-[11px] text-zinc-400">
-                JPG, PNG, WebP — up to 5MB each
-              </span>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                handleFiles(e.target.files);
-                e.target.value = '';
-              }}
-            />
-
-            {previews.length > 0 && (
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {previews.map((preview, index) => (
-                  <div key={preview} className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={preview}
-                      alt={`Reference ${index + 1}`}
-                      className="aspect-square w-full rounded-xl border border-zinc-200 object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeFile(index)}
-                      className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-zinc-900 text-white shadow"
-                      aria-label={`Remove reference ${index + 1}`}
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </div>
-                ))}
+          {designImages.length > 0 && (
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-zinc-700">
+                Choose a Design
+              </label>
+              <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={
+                    designImages[hoveredDesignIndex ?? selectedDesignIndex] ??
+                    designImages[0]
+                  }
+                  alt={`Design ${(hoveredDesignIndex ?? selectedDesignIndex) + 1}`}
+                  className="aspect-[4/3] w-full object-cover"
+                />
               </div>
-            )}
-
-            {uploadedUrls.length > 0 && (
-              <div className="mt-3 rounded-xl bg-emerald-50 p-3">
-                <p className="text-[11px] font-semibold text-emerald-700">
-                  ✓ {uploadedUrls.length} photo
-                  {uploadedUrls.length > 1 ? 's' : ''} uploaded &amp; attached to
-                  your order
-                </p>
-                <ul className="mt-1.5 space-y-1">
-                  {uploadedUrls.map((url, index) => (
-                    <li key={url} className="flex items-center justify-between gap-2">
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="truncate text-[11px] text-emerald-700 underline underline-offset-2"
-                      >
-                        Reference {index + 1}
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setUploadedUrls((prev) =>
-                            prev.filter((_, i) => i !== index),
-                          )
-                        }
-                        className="text-emerald-600 hover:text-emerald-800"
-                        aria-label={`Remove reference link ${index + 1}`}
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {files.length > 0 && (
-              <Button
-                type="button"
-                className="mt-3 w-full rounded-xl bg-amber-500 hover:bg-amber-600"
-                disabled={uploading}
-                onClick={handleUpload}
-              >
-                {uploading ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Upload className="size-4" />
+              <div className="relative mt-2.5">
+                {canScrollLeft && (
+                  <button
+                    type="button"
+                    aria-label="Previous designs"
+                    onClick={() => scrollThumbs('left')}
+                    className="absolute top-1/2 -left-3 z-10 grid size-8 -translate-y-1/2 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-md transition-colors hover:bg-zinc-50"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </button>
                 )}
-                {uploading
-                  ? 'Uploading…'
-                  : `Upload ${files.length} Reference Photo${files.length > 1 ? 's' : ''}`}
-              </Button>
-            )}
-
-            {uploadError && (
-              <p className="mt-2 text-xs text-red-600">{uploadError}</p>
-            )}
-          </div>
+                <div
+                  ref={thumbRowRef}
+                  onScroll={updateThumbArrows}
+                  className="flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  {designImages.map((url, index) => {
+                    const isActive = index === selectedDesignIndex;
+                    return (
+                      <button
+                        key={url}
+                        type="button"
+                        onMouseEnter={() => setHoveredDesignIndex(index)}
+                        onMouseLeave={() => setHoveredDesignIndex(null)}
+                        onClick={() => setSelectedDesignIndex(index)}
+                        aria-pressed={isActive}
+                        aria-label={`Design ${index + 1}`}
+                        className={`relative w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
+                          isActive
+                            ? 'border-amber-500 ring-2 ring-amber-500/30'
+                            : 'border-zinc-200 hover:border-zinc-300'
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={url}
+                          alt={`Design ${index + 1}`}
+                          className="aspect-square size-full object-cover"
+                        />
+                        {isActive && (
+                          <span className="absolute top-1 right-1 grid size-5 place-items-center rounded-full bg-amber-500 text-white shadow">
+                            <Check className="size-3" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {canScrollRight && (
+                  <button
+                    type="button"
+                    aria-label="More designs"
+                    onClick={() => scrollThumbs('right')}
+                    className="absolute top-1/2 -right-3 z-10 grid size-8 -translate-y-1/2 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-md transition-colors hover:bg-zinc-50"
+                  >
+                    <ChevronRight className="size-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -417,7 +347,7 @@ export function CustomizationOptions({ product }: { product: Product }) {
           addItem(product, qty, {
             isCustomized: isCustom,
             customNotes: notes.trim() || undefined,
-            customImages: uploadedUrls,
+            customImages: selectedDesign ? [selectedDesign] : [],
           });
           openDrawer();
         }}

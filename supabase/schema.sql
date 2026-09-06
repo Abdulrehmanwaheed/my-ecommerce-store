@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS products (
     category_id     UUID REFERENCES categories(id) ON DELETE SET NULL,
     attributes      JSONB NOT NULL DEFAULT '{}'::jsonb,
     is_featured     BOOLEAN NOT NULL DEFAULT FALSE,
+    allow_customization BOOLEAN NOT NULL DEFAULT FALSE,
+    custom_price    NUMERIC(12, 2) CHECK (custom_price >= 0),
+    design_images   TEXT[] NOT NULL DEFAULT '{}',
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

@@ -76,23 +76,25 @@ export function CheckoutForm() {
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
   const { cod, cardPayment } = STORE_CONFIG.paymentMethods;
+  const hasCustomizedItems = items.some((item) => item.isCustomized);
   const paymentOptions = useMemo<PaymentOption[]>(
     () =>
       [
-        cod && {
-          id: 'COD' as const,
-          label: 'Cash on Delivery',
-          description: 'Pay in cash when your order arrives.',
-          icon: <Banknote className="size-4" />,
-        },
-        cardPayment && {
-          id: 'ONLINE_CARD' as const,
-          label: 'Card / Mobile Wallet',
-          description: 'Debit, credit card or mobile wallet online.',
-          icon: <CreditCard className="size-4" />,
-        },
+        hasCustomizedItems
+          ? cardPayment && {
+              id: 'ONLINE_CARD' as const,
+              label: 'Card / Mobile Wallet',
+              description: 'Debit, credit card or mobile wallet online.',
+              icon: <CreditCard className="size-4" />,
+            }
+          : cod && {
+              id: 'COD' as const,
+              label: 'Cash on Delivery',
+              description: 'Pay in cash when your order arrives.',
+              icon: <Banknote className="size-4" />,
+            },
       ].filter(Boolean) as PaymentOption[],
-    [cod, cardPayment],
+    [cod, cardPayment, hasCustomizedItems],
   );
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('COD');
@@ -555,6 +557,11 @@ export function CheckoutForm() {
 
         <section className="rounded-3xl border border-border/60 bg-card p-6">
           <h2 className="text-base font-semibold">Payment Method</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {hasCustomizedItems
+              ? 'Orders with customized items are paid online.'
+              : 'This order is payable by Cash on Delivery.'}
+          </p>
           <div className="mt-4 grid gap-2.5">
             {paymentOptions.map((option) => (
               <button
