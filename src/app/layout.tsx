@@ -12,6 +12,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: `${STORE_CONFIG.brand.name} — ${STORE_CONFIG.brand.tagline}`,
   description: STORE_CONFIG.brand.tagline,
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 function distinctCategories(categories: NavCategory[]): NavCategory[] {

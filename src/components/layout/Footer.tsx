@@ -57,10 +57,14 @@ export function Footer({ categories }: { categories: NavCategory[] }) {
         <div>
           <Link
             href="/"
-            className="text-lg font-bold tracking-tight text-white"
+            className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-white"
           >
-            {STORE_CONFIG.brand.name}
-            <span className="text-emerald-500">.</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={STORE_CONFIG.brand.logoUrl}
+              alt={`${STORE_CONFIG.brand.name} logo`}
+              className="h-56 w-auto shrink-0 object-contain"
+            />
           </Link>
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-500">
             {STORE_CONFIG.brand.tagline}. Flat{' '}
@@ -89,7 +93,7 @@ export function Footer({ categories }: { categories: NavCategory[] }) {
           <h3 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
             Categories
           </h3>
-          <ul className="mt-4 space-y-2.5">
+          <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5">
             {categories.map((category) => (
               <li key={category.slug}>
                 <Link

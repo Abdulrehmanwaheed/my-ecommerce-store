@@ -53,15 +53,16 @@ export function Navbar({ categories }: { categories: NavCategory[] }) {
             <Link
               href="/"
               onClick={() => setMenuOpen(false)}
-              className="flex shrink-0 flex-col leading-tight transition-opacity hover:opacity-80"
+              className="flex shrink-0 items-center gap-2.5"
             >
-              <span className="flex items-baseline text-lg font-bold tracking-tight text-zinc-900">
-                {STORE_CONFIG.brand.name}
-                <span className="text-emerald-600">.</span>
-              </span>
-              <span className="hidden text-[11px] font-medium text-zinc-500 md:block">
-                {STORE_CONFIG.brand.tagline}
-              </span>
+              <span className="inline-flex h-14 shrink-0 items-center overflow-hidden rounded-xl bg-black px-3 shadow-sm ring-1 ring-zinc-200">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={STORE_CONFIG.brand.logoUrl}
+                alt={`${STORE_CONFIG.brand.name} logo`}
+                className="h-11 w-auto object-contain"
+              />
+            </span>
             </Link>
 
             {/* Search — desktop */}
