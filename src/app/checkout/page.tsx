@@ -13,11 +13,11 @@ export default function CheckoutPage() {
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          <h1 className="brand-display text-4xl tracking-tight sm:text-5xl">
             Checkout
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Fast, secure and flexible payment options.
+            A few details, and your favourites are on their way.
           </p>
         </div>
       </div>

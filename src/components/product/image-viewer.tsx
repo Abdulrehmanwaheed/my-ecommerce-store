@@ -59,7 +59,7 @@ export function ImageViewer({ product }: { product: Product }) {
   return (
     <div className="space-y-3">
       <div
-        className="group relative aspect-square cursor-zoom-in overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-primary/20 via-muted to-muted"
+        className="group relative aspect-square cursor-zoom-in overflow-hidden rounded-sm border border-border/60 bg-[#eeeae2]"
         onMouseEnter={() => {
           if (activeView) {
             setZoomed(true);

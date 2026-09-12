@@ -255,3 +255,13 @@
     transform: translateY(0);
   }
 }
+/* Awan boutique storefront */
+:root { --bg-main: #faf8f3; --background: #faf8f3; --foreground: #25231f; --primary: #99752e; --primary-hover: #785a20; --primary-foreground: #ffffff; --border: #e5ded2; --ring: #99752e; }
+.brand-display { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; }
+.brand-eyebrow { display: flex; align-items: center; gap: 0.65rem; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; color: #8a692e; }
+.boutique-button { display: inline-flex; align-items: center; justify-content: center; gap: 1rem; min-height: 48px; padding: 0.75rem 1.5rem; background: #25231f; color: #fff; font-size: 13px; font-weight: 500; transition: background 180ms, transform 180ms; }
+.boutique-button:hover { background: #4a4030; }
+:focus-visible { outline: 2px solid #99752e; outline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

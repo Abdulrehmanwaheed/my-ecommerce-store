@@ -28,7 +28,7 @@ export function BuyActions({ product }: { product: Product }) {
   return (
     <div className="flex flex-col gap-3">
       {/* Quantity selector */}
-      <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white p-2 pl-4 shadow-sm">
+      <div className="flex items-center justify-between rounded-sm border border-[#ded7cb] bg-transparent p-2 pl-4">
         <span className="text-sm text-zinc-600">Quantity</span>
         <div className="flex items-center gap-1">
           <Button
@@ -59,7 +59,7 @@ export function BuyActions({ product }: { product: Product }) {
       <Button
         size="lg"
         disabled={outOfStock}
-        className="h-12 w-full rounded-xl bg-zinc-900 py-3.5 text-base font-semibold hover:bg-zinc-800"
+        className="h-12 w-full rounded-sm bg-zinc-900 py-3.5 text-base font-semibold hover:bg-zinc-800"
         onClick={() => {
           addItem(product, qty);
           openDrawer();
@@ -74,11 +74,11 @@ export function BuyActions({ product }: { product: Product }) {
       {/* WhatsApp 1-click — emerald */}
       <Button
         size="lg"
-        className="h-12 w-full rounded-xl border-emerald-600/40 bg-emerald-600 py-3.5 text-base font-semibold text-white hover:bg-emerald-500 hover:text-white"
+        className="h-12 w-full rounded-sm border border-[#ded7cb] bg-transparent py-3.5 text-sm font-medium text-stone-700 hover:bg-[#eee7db] hover:text-stone-900"
         render={<a href={whatsappUrl} target="_blank" rel="noopener noreferrer" />}
       >
         <MessagesSquare className="size-4" />
-        Order via WhatsApp in 1-Click
+        Ask about this piece on WhatsApp
       </Button>
     </div>
   );

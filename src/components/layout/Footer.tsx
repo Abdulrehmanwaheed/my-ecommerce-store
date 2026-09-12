@@ -1,19 +1,6 @@
 import Link from 'next/link';
-import {
-  AtSign,
-  Banknote,
-  CreditCard,
-  Globe,
-  Mail,
-  MessageCircle,
-  RotateCcw,
-  ShieldCheck,
-  Truck,
-  Wallet,
-} from 'lucide-react';
-
+import { ArrowUpRight, Truck, ShieldCheck, MessageCircle } from 'lucide-react';
 import { STORE_CONFIG } from '@/store.config';
-import { NewsletterForm } from '@/components/layout/newsletter-form';
 import type { NavCategory } from '@/components/layout/Navbar';
 
 const TRUST_ITEMS = [
@@ -22,178 +9,22 @@ const TRUST_ITEMS = [
   { icon: null, label: '0311-0268033' },
 ];
 
-const SOCIALS = [
-  { icon: Globe, label: 'Website', href: '/' },
-  { icon: AtSign, label: 'Instagram', href: '#' },
-  { icon: Mail, label: 'Email', href: `mailto:${STORE_CONFIG.brand.supportEmail}` },
-  { icon: MessageCircle, label: 'WhatsApp', href: `https://wa.me/${STORE_CONFIG.whatsapp.phoneNumber}` },
-];
-
 export function Footer({ categories }: { categories: NavCategory[] }) {
-  const whatsappUrl = `https://wa.me/${STORE_CONFIG.whatsapp.phoneNumber}?text=${encodeURIComponent(
-    STORE_CONFIG.whatsapp.defaultMessage,
-  )}`;
-
+  const whatsappUrl = `https://wa.me/${STORE_CONFIG.whatsapp.phoneNumber}`;
   return (
-    <footer className="mt-20 bg-zinc-950 text-zinc-300">
-      {/* Trust ticker */}
-      <div className="border-b border-white/10">
-        <div className="mx-auto max-w-7xl overflow-hidden px-4 py-5 sm:px-6">
-          <div className="marquee-track flex w-max items-center gap-10">
-            {[...TRUST_ITEMS, ...TRUST_ITEMS].map((item, index) => (
-              <span
-                key={`${item.label}-${index}`}
-                className="flex shrink-0 items-center gap-2 text-xs font-medium tracking-wide text-zinc-400"
-              >
-                {item.icon && <item.icon className="size-4 text-emerald-500" />}
-                {item.label}
-              </span>
-            ))}
-          </div>
+    <footer className="mt-16 bg-[#22231f] text-[#f5efe4]">
+      <div className="overflow-hidden border-b border-white/10 py-5">
+        <div className="marquee-track flex w-max items-center gap-12">
+          {[...TRUST_ITEMS, ...TRUST_ITEMS, ...TRUST_ITEMS, ...TRUST_ITEMS].map((item, index) => <span key={index} className="flex shrink-0 items-center gap-3 text-[11px] uppercase tracking-[0.16em] text-[#d5b976]">{item.icon && <item.icon className="size-4" strokeWidth={1.4} />}{item.label}<span className="ml-7 text-[#88713e]" aria-hidden="true">✦</span></span>)}
         </div>
       </div>
-
-      {/* Main footer */}
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
-        <div>
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-white"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={STORE_CONFIG.brand.logoUrl}
-              alt={`${STORE_CONFIG.brand.name} logo`}
-              className="h-56 w-auto shrink-0 object-contain"
-            />
-          </Link>
-          <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-500">
-            {STORE_CONFIG.brand.tagline}.
-          </p>
-          <div className="mt-4 space-y-1.5 text-sm">
-            <a
-              href={`mailto:${STORE_CONFIG.brand.supportEmail}`}
-              className="flex items-center gap-2 text-zinc-400 transition-colors hover:text-white"
-            >
-              <Mail className="size-3.5" />
-              {STORE_CONFIG.brand.supportEmail}
-            </a>
-            <a
-              href={`tel:${STORE_CONFIG.brand.supportPhone.replace(/\s/g, '')}`}
-              className="flex items-center gap-2 text-zinc-400 transition-colors hover:text-white"
-            >
-              <MessageCircle className="size-3.5" />
-              {STORE_CONFIG.brand.supportPhone}
-            </a>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-            Categories
-          </h3>
-          <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5">
-            {categories.map((category) => (
-              <li key={category.slug}>
-                <Link
-                  href={`/?cat=${category.slug}#catalog`}
-                  className="text-sm text-zinc-400 transition-colors hover:text-white"
-                >
-                  {category.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <h3 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-            Quick Links
-          </h3>
-          <ul className="mt-4 space-y-2.5 text-sm">
-            <li>
-              <Link href="/#catalog" className="text-zinc-400 transition-colors hover:text-white">
-                Shop All Products
-              </Link>
-            </li>
-            <li>
-              <Link href="/checkout" className="text-zinc-400 transition-colors hover:text-white">
-                Checkout
-              </Link>
-            </li>
-            <li>
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-zinc-400 transition-colors hover:text-white"
-              >
-                Track Order on WhatsApp
-              </a>
-            </li>
-            <li>
-              <Link href="/admin" className="text-zinc-400 transition-colors hover:text-white">
-                Admin Panel
-              </Link>
-            </li>
-          </ul>
-          <h3 className="mt-7 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-            Follow Us
-          </h3>
-          <div className="mt-4 flex gap-2">
-            {SOCIALS.map((social) => (
-              <a
-                key={social.label}
-                href={social.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={social.label}
-                className="grid size-9 place-items-center rounded-xl bg-white/5 text-zinc-400 transition-colors hover:bg-emerald-600 hover:text-white"
-              >
-                <social.icon className="size-4" />
-              </a>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-            Get Deals First
-          </h3>
-          <p className="mt-4 text-sm text-zinc-500">
-            New arrivals, restocks and exclusive offers — straight to your inbox.
-          </p>
-          <div className="mt-4">
-            <NewsletterForm />
-          </div>
-          <h3 className="mt-7 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-            We Accept
-          </h3>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-zinc-300">
-              <Banknote className="size-3.5 text-emerald-500" />
-              Cash on Delivery
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-zinc-300">
-              <CreditCard className="size-3.5 text-emerald-500" />
-              Debit / Credit Card
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-zinc-300">
-              <Wallet className="size-3.5 text-emerald-500" />
-              JazzCash / Easypaisa
-            </span>
-          </div>
-        </div>
+      <div className="mx-auto grid max-w-7xl gap-10 px-6 py-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_0.8fr_1.1fr]">
+        <div><Link href="/"><img src={STORE_CONFIG.brand.logoUrl} alt="Awan Collection" className="h-auto w-56 max-w-full" /></Link><p className="mt-5 max-w-xs text-sm leading-7 text-stone-400">{STORE_CONFIG.brand.tagline}.<br />A collection for your everyday, and the moments that matter.</p><p className="mt-6 text-[10px] uppercase tracking-[0.18em] text-[#d5b976]">FASHION · LIFESTYLE · PERSONALIZED GIFTS</p></div>
+        <div><h3 className="text-xs font-medium uppercase tracking-[0.16em] text-[#d5b976]">Explore the collection</h3><ul className="mt-5 space-y-3 text-sm text-stone-300">{categories.filter((category) => /dress|bags|footwear|jewelry|men.*wear|custom/i.test(category.name)).slice(0, 6).map((category) => <li key={category.slug}><Link href={`/?cat=${category.slug}#catalog`} className="hover:text-[#d5b976]">{category.name}</Link></li>)}<li><Link href="/#catalog" className="inline-flex items-center gap-2 text-[#d5b976]">View all collections <ArrowUpRight className="size-3" /></Link></li></ul></div>
+        <div><h3 className="text-xs font-medium uppercase tracking-[0.16em] text-[#d5b976]">Here to help</h3><ul className="mt-5 space-y-3 text-sm text-stone-300"><li><Link href="/account">My account</Link></li><li><Link href="/checkout">Checkout</Link></li><li><a href={`${whatsappUrl}?text=${encodeURIComponent('Hi! I would like an update on my order.')}`} target="_blank" rel="noopener noreferrer">Track my order</a></li><li><a href={whatsappUrl} target="_blank" rel="noopener noreferrer">Contact us</a></li><li><a href={`mailto:${STORE_CONFIG.brand.supportEmail}`}>Email support</a></li></ul></div>
+        <div><h3 className="brand-display text-3xl">Let’s find your favourite.</h3><p className="mt-3 text-sm leading-7 text-stone-400">Need a hand choosing? Talk to us about products or a personal touch.</p><a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-3 border-b border-[#d5b976]/50 pb-2 text-sm text-[#d5b976]"><MessageCircle className="size-4" />0311-0268033 <ArrowUpRight className="size-4" /></a><p className="mt-6 text-xs leading-6 text-stone-400">Cash on Delivery for standard orders.<br />Easypaisa for personalized orders.</p></div>
       </div>
-
-      <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-5 text-xs text-zinc-600 sm:px-6">
-          <p>
-            © {new Date().getFullYear()} {STORE_CONFIG.brand.name}. All rights reserved.
-          </p>
-          <p>Made with care in Pakistan 🇵🇰</p>
-        </div>
-      </div>
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 border-t border-white/10 px-6 py-6 text-[11px] text-stone-400"><p>© {new Date().getFullYear()} {STORE_CONFIG.brand.name}. All rights reserved.</p><p>Made with care in Pakistan.</p></div>
     </footer>
   );
 }

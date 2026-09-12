@@ -26,7 +26,7 @@ export default async function HomePage({
 }: {
   searchParams: Promise<{ cat?: string; q?: string }>;
 }) {
-  const { cat } = await searchParams;
+  const { cat, q } = await searchParams;
 
   let products: Product[] = [];
   let categories: { id: string; slug: string; name: string }[] = [];
@@ -43,7 +43,7 @@ export default async function HomePage({
         slug: CUSTOMIZED_CATEGORY.slug,
         name: CUSTOMIZED_CATEGORY.name,
       },
-      ...fetchedCategories.map((category) => ({
+      ...fetchedCategories.filter((category) => fetchedProducts.some((product) => product.category_id === category.id)).map((category) => ({
         id: category.id,
         slug: category.slug,
         name: category.name,
@@ -56,12 +56,13 @@ export default async function HomePage({
   return (
     <main>
       <Hero products={products} />
-      <CustomOrderBanner />
       <CatalogSection
         products={products}
         categories={categories}
         initialCategory={cat}
+        query={q}
       />
+      <CustomOrderBanner />
     </main>
   );
 }

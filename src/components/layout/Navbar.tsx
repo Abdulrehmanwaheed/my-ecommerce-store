@@ -46,21 +46,21 @@ export function Navbar({ categories }: { categories: NavCategory[] }) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/85">
+      <header className="sticky top-0 z-50 border-b border-zinc-200/70 bg-[#faf8f3]/95 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex h-16 items-center justify-between gap-4">
+          <div className="flex h-20 items-center justify-between gap-4">
             {/* Brand */}
             <Link
               href="/"
               onClick={() => setMenuOpen(false)}
               className="flex shrink-0 items-center gap-2.5"
             >
-              <span className="inline-flex h-14 shrink-0 items-center overflow-hidden rounded-xl bg-black px-3 shadow-sm ring-1 ring-zinc-200">
+              <span className="inline-flex h-14 shrink-0 items-center overflow-hidden rounded-sm bg-[#171715] px-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={STORE_CONFIG.brand.logoUrl}
                 alt={`${STORE_CONFIG.brand.name} logo`}
-                className="h-11 w-auto object-contain"
+                className="h-11 w-[132px] object-contain"
               />
             </span>
             </Link>
@@ -81,7 +81,7 @@ export function Navbar({ categories }: { categories: NavCategory[] }) {
                     Categories
                     <ChevronDown className="size-3.5 text-zinc-400 transition-transform group-hover:rotate-180" />
                   </button>
-                  <div className="invisible absolute top-full right-0 z-50 w-52 translate-y-1 overflow-hidden rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-xl shadow-black/5 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+                  <div className="invisible absolute top-full right-0 z-50 w-52 translate-y-1 overflow-hidden rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-xl shadow-black/5 opacity-0 transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
                     {categories.map((category) => (
                       <Link
                         key={category.slug}
@@ -98,9 +98,9 @@ export function Navbar({ categories }: { categories: NavCategory[] }) {
               <Link
                 href={`/?cat=${CUSTOMIZED_CATEGORY.slug}#catalog`}
                 onClick={() => setMenuOpen(false)}
-                className="hidden items-center gap-1.5 rounded-xl border border-[color:var(--accent-emerald)]/40 bg-[color:var(--accent-emerald)]/5 px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-[color:var(--accent-emerald)]/10 lg:inline-flex"
+                className="hidden items-center gap-1.5 rounded-xl border border-[#d8cfbf] bg-[#eee7db]/40 px-3 py-2 text-sm font-semibold text-[#785a20] transition-colors hover:bg-[#eee7db] lg:inline-flex"
               >
-                <Paintbrush className="size-4 text-[color:var(--accent-emerald)]" />
+                <Paintbrush className="size-4 text-[#99752e]" />
                 Custom Orders
               </Link>
 
@@ -148,6 +148,13 @@ export function Navbar({ categories }: { categories: NavCategory[] }) {
           </div>
         </div>
 
+        <nav aria-label="Shop navigation" className="hidden border-t border-[#e5ded2] lg:block">
+          <div className="mx-auto flex max-w-7xl items-center gap-7 overflow-x-auto px-6 py-3 text-[11px] font-medium uppercase tracking-[0.12em] text-stone-600">
+            <Link href="/#catalog" className="shrink-0 text-stone-950">Shop all</Link>
+            {categories.filter((category) => /dress|bags|footwear|jewelry|men.*wear/i.test(category.name)).slice(0, 5).map((category) => <Link key={category.slug} href={`/?cat=${category.slug}#catalog`} className="shrink-0 hover:text-[#99752e]">{category.name}</Link>)}
+            <Link href={`/?cat=${CUSTOMIZED_CATEGORY.slug}#catalog`} className="ml-auto shrink-0 text-[#8a692e]">Made personal</Link>
+          </div>
+        </nav>
         {/* Mobile menu */}
         {menuOpen && (
           <div className="border-t border-zinc-200/70 bg-white lg:hidden">

@@ -2,146 +2,40 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Eye, MessageCircle, Plus, Star } from 'lucide-react';
-
-import { STORE_CONFIG } from '@/store.config';
+import { Plus, ArrowUpRight, Check, ShoppingBag } from 'lucide-react';
 import { useCartStore } from '@/lib/cart-store';
 import { formatPrice } from '@/lib/format';
 import type { Product } from '@/types/database';
-
-import { Button } from '@/components/ui/button';
 
 export function ProductCard({ product }: { product: Product }) {
   const addItem = useCartStore((s) => s.addItem);
   const openDrawer = useCartStore((s) => s.openDrawer);
   const [imgFailed, setImgFailed] = useState(false);
-
-  const discount =
-    product.original_price && product.original_price > product.price
-      ? Math.round((1 - product.price / product.original_price) * 100)
-      : null;
-
-  const whatsappUrl = `https://wa.me/${
-    STORE_CONFIG.whatsapp.phoneNumber
-  }?text=${encodeURIComponent(
-    `Hi ${STORE_CONFIG.brand.name}, I want to order *${product.title}* (${formatPrice(
-      product.price,
-    )})`,
-  )}`;
+  const discount = product.original_price && product.original_price > product.price
+    ? Math.round((1 - product.price / product.original_price) * 100) : null;
 
   return (
-    <motion.article
-      layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.25, ease: 'easeOut' }}
-      whileHover={{ y: -4 }}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-amber-500/20 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/5"
-    >
-      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-zinc-100 via-zinc-50 to-zinc-100">
-        <Link
-          href={`/product/${product.slug}`}
-          className="absolute inset-0 z-0 block"
-        >
-          {product.images[0] && !imgFailed ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={product.images[0]}
-              alt={product.title}
-              onError={() => setImgFailed(true)}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
+    <article className="group flex min-w-0 flex-col">
+      <Link href={`/product/${product.slug}`} className="relative block aspect-[4/5] overflow-hidden rounded-sm bg-[#eeeae2]">
+        {product.images[0] && !imgFailed ? <img src={product.images[0]} alt={product.title} loading="lazy" onError={() => setImgFailed(true)} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          : <span className="grid h-full place-items-center text-stone-400"><ShoppingBag className="size-12" strokeWidth={1} /><span className="sr-only">{product.title}</span></span>}
+        {discount && <span className="absolute left-3 top-3 bg-[#faf8f3] px-2 py-1 text-[10px] font-semibold tracking-wide text-[#775a28]">SAVE {discount}%</span>}
+        {product.stock <= 0 && <span className="absolute inset-x-0 bottom-0 bg-black/70 py-2 text-center text-xs text-white">Sold out</span>}
+        <span className="absolute bottom-3 right-3 grid size-8 place-items-center rounded-full bg-white/90 text-stone-800 transition-transform group-hover:-rotate-12"><ArrowUpRight className="size-4" /></span>
+      </Link>
+      <div className="flex flex-1 flex-col py-4">
+        <p className="mb-2 text-[9px] font-medium uppercase tracking-[0.16em] text-[#8a692e]">{product.allow_customization ? 'MAKE IT PERSONAL' : 'AWAN COLLECTION'}</p>
+        <Link href={`/product/${product.slug}`} className="text-sm font-medium leading-6 text-stone-900 hover:underline"><h3 className="line-clamp-2">{product.title}</h3></Link>
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1"><span className="text-sm font-semibold tabular-nums">{formatPrice(product.price)}</span>{product.original_price && product.original_price > product.price && <span className="text-xs text-stone-400 line-through">{formatPrice(product.original_price)}</span>}</div>
+        <div className="mt-auto pt-4">
+          {product.allow_customization ? (
+            <Link href={`/product/${product.slug}`} className="flex min-h-10 w-full items-center justify-between gap-1 border border-[#d8cfbf] px-3 text-xs font-medium transition-colors hover:border-stone-900 hover:bg-stone-900 hover:text-white">View & personalize <ArrowUpRight className="size-4 shrink-0" /></Link>
           ) : (
-            <span className="grid h-full w-full place-items-center text-5xl font-bold tracking-tight text-zinc-400/30 transition-transform duration-500 group-hover:scale-110">
-              {product.title.charAt(0)}
-            </span>
+            <button type="button" disabled={product.stock <= 0} onClick={() => { addItem(product, 1); openDrawer(); }} className="flex min-h-10 w-full items-center justify-between gap-1 border border-[#d8cfbf] px-3 text-xs font-medium transition-colors hover:border-stone-900 hover:bg-stone-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-40">{product.stock > 0 ? 'Add to bag' : 'Sold out'} <Plus className="size-4 shrink-0" /></button>
           )}
-        </Link>
-
-        {/* Live badges */}
-        <div className="absolute top-2.5 left-2.5 z-10 flex flex-col items-start gap-1.5">
-          {discount && (
-            <span className="rounded-full bg-[color:var(--accent-emerald)] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
-              {discount}% OFF
-            </span>
-          )}
-        </div>
-        {product.stock === 0 ? (
-          <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-zinc-900 px-2 py-0.5 text-[11px] font-semibold text-white">
-            Out of Stock
-          </span>
-        ) : (
-          <span className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-[color:var(--accent-emerald)] shadow-sm backdrop-blur">
-            <span className="size-1.5 animate-pulse rounded-full bg-[color:var(--accent-emerald)]" />
-            In Stock
-          </span>
-        )}
-
-        {/* Quick actions overlay — slides up on hover */}
-        <div className="absolute inset-x-2 bottom-2 z-10 translate-y-[120%] opacity-0 transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100">
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/product/${product.slug}`}
-              className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-white/95 text-xs font-semibold text-zinc-900 shadow-lg backdrop-blur transition-colors hover:bg-white"
-            >
-              <Eye className="size-3.5" />
-              Quick View
-            </Link>
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-[color:var(--accent-emerald)] text-xs font-semibold text-white shadow-lg transition-colors hover:bg-emerald-700"
-            >
-              <MessageCircle className="size-3.5" />
-              WhatsApp Buy
-            </a>
-          </div>
+          {product.stock > 0 && <p className="mt-2 flex items-center gap-1 text-[10px] text-stone-500"><Check className="size-3" />{product.allow_customization ? 'Personalized for you' : 'Cash on Delivery available'}</p>}
         </div>
       </div>
-
-      <div className="flex flex-1 flex-col p-3.5">
-        <Link href={`/product/${product.slug}`}>
-          <h3 className="text-sm font-semibold tracking-tight text-zinc-900 transition-colors hover:text-[color:var(--primary)]">
-            {product.title}
-          </h3>
-        </Link>
-        <div className="mt-1 flex items-center gap-1 text-xs">
-          <span className="flex items-center gap-0.5 text-amber-500">
-            <Star className="size-3.5 fill-current" />
-            <span className="font-semibold text-zinc-700">4.9</span>
-          </span>
-          <span className="text-zinc-400">(214 reviews)</span>
-        </div>
-        <p className="mt-1 line-clamp-1 text-xs text-zinc-500">
-          {product.description}
-        </p>
-
-        <div className="mt-2.5 flex items-baseline gap-1.5">
-          <span className="text-base font-bold text-zinc-900 tabular-nums">
-            {formatPrice(product.price)}
-          </span>
-          {product.original_price && product.original_price > product.price && (
-            <span className="text-xs text-zinc-400 line-through tabular-nums">
-              {formatPrice(product.original_price)}
-            </span>
-          )}
-        </div>
-
-        <Button
-          className="mt-3 w-full rounded-xl bg-zinc-900 hover:bg-zinc-800"
-          disabled={product.stock === 0}
-          onClick={() => {
-            addItem(product, 1);
-            openDrawer();
-          }}
-        >
-          <Plus className="size-4" />
-          Add to Cart
-        </Button>
-      </div>
-    </motion.article>
+    </article>
   );
 }

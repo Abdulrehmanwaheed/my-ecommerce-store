@@ -116,7 +116,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
         {/* Left — media */}
-        <div className="lg:sticky lg:top-24 lg:self-start">
+        <div className="lg:sticky lg:top-40 lg:self-start">
           <ImageViewer product={product} />
         </div>
 
@@ -125,7 +125,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           {/* Category + status */}
           <div className="flex flex-wrap items-center gap-2">
             {category && (
-              <Badge className="gap-1 border-emerald-600/40 bg-emerald-50 text-emerald-700">
+              <Badge className="gap-1 border-[#ded7cb] bg-[#eee7db] text-[#785a20]">
                 {category.name}
               </Badge>
             )}
@@ -140,17 +140,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
 
           {/* Title + rating */}
-          <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
+          <h1 className="brand-display mt-4 text-4xl leading-tight tracking-tight text-zinc-900 sm:text-5xl">
             {product.title}
           </h1>
-          <div className="mt-2 flex items-center gap-1.5 text-sm">
-            <span className="flex items-center gap-0.5 text-amber-500">
-              <Star className="size-4 fill-current" />
-              <span className="font-bold text-zinc-900">4.9</span>
-            </span>
-            <span className="text-zinc-500">· 214 reviews</span>
-          </div>
-
           {product.allow_customization ? (
             <div className="mt-5">
               <CustomizationOptions product={product} />
@@ -158,9 +150,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
           ) : (
             <>
               {/* Price box */}
-              <div className="mt-5 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+              <div className="mt-5 border-y border-[#ded7cb] py-5">
                 <div className="flex flex-wrap items-baseline gap-3">
-                  <span className="text-4xl font-extrabold text-zinc-900 tabular-nums">
+                  <span className="text-3xl font-semibold text-zinc-900 tabular-nums">
                     {formatPrice(product.price)}
                   </span>
                   {product.original_price &&
@@ -169,7 +161,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                         <span className="text-lg text-zinc-400 line-through tabular-nums">
                           {formatPrice(product.original_price)}
                         </span>
-                        <span className="rounded-full bg-red-600 px-2.5 py-1 text-xs font-bold text-white">
+                        <span className="rounded-sm bg-[#785a20] px-2.5 py-1 text-xs font-bold text-white">
                           Save {discount}%
                         </span>
                       </>
@@ -195,14 +187,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-100">
                     <div
-                      className="h-full rounded-full bg-red-600 transition-all"
+                      className="h-full rounded-sm bg-[#785a20] transition-all"
                       style={{ width: `${lowStock}%` }}
                     />
                   </div>
                 </>
               ) : (
                 <p className="text-xs text-zinc-500">
-                  In stock — same-day dispatch before 4 PM.
+                  In stock and available to order.
                 </p>
               )}
             </div>
@@ -225,17 +217,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
           {/* Trust icons */}
           <div className="mt-6 grid grid-cols-1 gap-2.5 text-xs text-zinc-600 sm:grid-cols-3">
-            <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm">
-              <Truck className="size-4 shrink-0 text-emerald-600" />
+            <div className="flex items-center gap-2 border-t border-[#ded7cb] py-4">
+              <Truck className="size-4 shrink-0 text-[#8a692e]" />
               Fast Nationwide Delivery
             </div>
-            <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm">
-              <ShieldCheck className="size-4 shrink-0 text-emerald-600" />
+            <div className="flex items-center gap-2 border-t border-[#ded7cb] py-4">
+              <ShieldCheck className="size-4 shrink-0 text-[#8a692e]" />
               100% Original Guarantee
             </div>
-            <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm">
-              <CreditCard className="size-4 shrink-0 text-emerald-600" />
-              Secure Online Payment
+            <div className="flex items-center gap-2 border-t border-[#ded7cb] py-4">
+              <CreditCard className="size-4 shrink-0 text-[#8a692e]" />
+              {product.allow_customization ? 'Easypaisa transfer' : 'Cash on Delivery'}
             </div>
           </div>
         </div>
@@ -268,7 +260,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
                   We ship to {STORE_CONFIG.shipping.cities.slice(0, 9).join(', ')}{' '}
                   and all major cities across Pakistan. Delivery is a flat{' '}
                   {formatPrice(STORE_CONFIG.shipping.flatRateFee)} nationwide.
-                  Same-day dispatch for orders placed before 4 PM.
                 </p>
               </TabsContent>
             )}
@@ -321,7 +312,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                       href={whatsappUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[#8a692e] hover:text-emerald-700"
                     >
                       <MessagesSquare className="size-4" />
                       Leave a review on WhatsApp

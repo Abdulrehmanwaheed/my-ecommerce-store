@@ -677,7 +677,7 @@ export function CheckoutForm() {
       </div>
 
       {/* Right — summary */}
-      <aside className="h-fit rounded-3xl border border-border/60 bg-card p-6 lg:sticky lg:top-24">
+      <aside className="h-fit rounded-3xl border border-border/60 bg-card p-6 lg:sticky lg:top-40">
         <h2 className="text-base font-semibold">Order Summary</h2>
 
         <ul className="mt-4 space-y-3">

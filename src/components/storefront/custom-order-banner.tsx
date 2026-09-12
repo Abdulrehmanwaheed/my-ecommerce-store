@@ -1,86 +1,23 @@
 import Link from 'next/link';
-import {
-  ArrowRight,
-  MessageCircle,
-  Paintbrush,
-  Sparkles,
-} from 'lucide-react';
-
-import { STORE_CONFIG } from '@/store.config';
+import { ArrowRight, PenLine } from 'lucide-react';
 import { CUSTOMIZED_CATEGORY } from '@/lib/backend-demo';
-import { Button } from '@/components/ui/button';
-
-const CUSTOMIZABLE_TYPES = [
-  "Fancy Dresses",
-  "Women's Bags",
-  "Footwear",
-  "Watches & Jewelry",
-  "Cosmetics",
-];
 
 export function CustomOrderBanner() {
-  const whatsappUrl = `https://wa.me/${STORE_CONFIG.whatsapp.phoneNumber}?text=${encodeURIComponent(
-    STORE_CONFIG.whatsapp.defaultMessage,
-  )}`;
-
   return (
-    <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
-      <div className="relative isolate overflow-hidden rounded-3xl border border-[color:var(--accent-emerald)]/30 bg-gradient-to-br from-[color:var(--accent-emerald)]/10 via-zinc-900 to-zinc-950 p-7 text-white shadow-xl shadow-zinc-900/20 sm:p-9">
-        <div className="pointer-events-none absolute -top-12 -right-12 size-64 rounded-full bg-[color:var(--accent-emerald)]/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-16 -left-10 size-64 rounded-full bg-[color:var(--primary)]/10 blur-3xl" />
-
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--accent-emerald)]/40 bg-[color:var(--accent-emerald)]/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-              <Paintbrush className="size-3.5" />
-              Made Only-For-You
-            </span>
-            <h2 className="mt-4 text-2xl font-extrabold tracking-tight sm:text-3xl">
-              We Customize It — Your Style, Your Name, Your Way
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-white/60 sm:text-base">
-              Custom name prints, photo embossing, color swaps, size tailoring
-              &amp; gemstone details on items like{' '}
-              {CUSTOMIZABLE_TYPES.join(', ')}.
-            </p>
-            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-white/70">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="size-3.5 text-[color:var(--accent-emerald)]" />
-                Name engraving &amp; prints
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="size-3.5 text-[color:var(--accent-emerald)]" />
-                Colors &amp; sizes your way
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="size-3.5 text-[color:var(--accent-emerald)]" />
-                Daily delivery nationwide
-              </span>
-            </div>
-          </div>
-
-          <div className="flex shrink-0 flex-wrap items-center gap-3">
-            <Button
-              size="lg"
-              className="h-12 rounded-xl bg-[color:var(--primary)] px-7 text-base font-semibold text-zinc-950 shadow-lg shadow-[color:var(--primary)]/25 hover:bg-[color:var(--primary-hover)] hover:text-zinc-950"
-              render={
-                <Link href={`/?cat=${CUSTOMIZED_CATEGORY.slug}#catalog`} />
-              }
-            >
-              Browse Customizable Items
-              <ArrowRight className="size-4" />
-            </Button>
-            <Button
-              size="lg"
-              className="h-12 rounded-xl border-emerald-600/40 bg-[color:var(--accent-emerald)] px-7 text-base font-semibold text-white hover:bg-emerald-700 hover:text-white"
-              render={
-                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" />
-              }
-            >
-              <MessageCircle className="size-4" />
-              Order on WhatsApp
-            </Button>
-          </div>
+    <section className="mx-auto max-w-7xl px-4 pt-14 sm:px-6">
+      <div className="grid gap-8 bg-[#22231f] px-7 py-10 text-[#faf7f0] sm:px-12 lg:grid-cols-[1fr_1fr] lg:items-center">
+        <div>
+          <p className="brand-eyebrow text-[#d5b976]"><PenLine className="size-4" /> SOMETHING ONLY YOU COULD GIVE</p>
+          <h2 className="brand-display mt-4 text-4xl sm:text-5xl">Ordinary things.<br /><span className="italic text-[#d5b976]">Your personal touch.</span></h2>
+          <p className="mt-4 max-w-md text-sm leading-7 text-stone-300">A name, a photo, a memory. Turn a piece from our customizable collection into something that feels truly yours.</p>
+          <Link href={`/?cat=${CUSTOMIZED_CATEGORY.slug}#catalog`} className="mt-6 inline-flex items-center gap-3 border-b border-[#d5b976] pb-2 text-sm text-[#e7d19d]">Explore personalized pieces <ArrowRight className="size-4" /></Link>
+        </div>
+        <div className="space-y-5 lg:border-l lg:border-white/15 lg:pl-12">
+          {[
+            ['01', 'Choose your piece', 'Browse products with a personalization option.'],
+            ['02', 'Make it yours', 'Add your notes and reference photos.'],
+            ['03', 'Pay & share your receipt', 'Pay with Easypaisa and upload a PNG screenshot at checkout.'],
+          ].map(([number, title, copy]) => <div key={number} className="flex gap-5"><span className="brand-display text-3xl text-[#d5b976]">{number}</span><div><h3 className="text-sm font-medium">{title}</h3><p className="mt-1 text-xs leading-6 text-stone-400">{copy}</p></div></div>)}
         </div>
       </div>
     </section>

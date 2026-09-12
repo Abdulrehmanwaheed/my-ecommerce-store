@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 
 import type { CatalogFilter } from '@/components/storefront/product-grid';
-import { CUSTOMIZED_CATEGORY } from '@/lib/backend-demo';
 
 const CATEGORY_ICONS: Record<string, { icon: typeof Package; label: string }> = {
   footwear: { icon: Footprints, label: 'Footwear' },
@@ -61,56 +60,15 @@ export function CategoryBar({
   ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto mt-6 px-4 py-4 sm:py-6">
-      <div className="scrollbar-none flex flex-nowrap items-center justify-between gap-4 overflow-x-auto sm:gap-6 lg:grid lg:grid-cols-9 lg:gap-4">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="scrollbar-none flex items-center gap-2 overflow-x-auto pb-3 lg:flex-wrap" aria-label="Product categories">
         {filters.map((filter) => {
-          const { icon: Icon, label } = iconFor(filter);
+          const { icon: Icon } = iconFor(filter);
           const isActive = active === filter.slug;
-          const isCustom = filter.slug === CUSTOMIZED_CATEGORY.slug;
-
           return (
-            <button
-              key={filter.slug}
-              type="button"
-              onClick={() => onSelect(filter.slug)}
-              className="story-bounce group relative flex shrink-0 flex-col items-center justify-center"
-              aria-label={`Filter by ${filter.name}`}
-            >
-                <span
-                className={`story-ring relative grid size-16 sm:size-20 place-items-center rounded-full bg-[color:var(--bg-card)] shadow-md transition-shadow ${
-                  isActive ? 'shadow-[0_0_18px_var(--border-glow)]' : ''
-                } ${
-                  isCustom
-                    ? 'ring-2 ring-[color:var(--accent-emerald)]/70'
-                    : ''
-                }`}
-              >
-                <span className="grid size-full place-items-center rounded-full bg-[color:var(--bg-card)] transition-colors group-hover:bg-white">
-                  <Icon
-                    className={`size-8 transition-colors ${
-                      isActive
-                        ? 'text-[color:var(--primary)]'
-                        : 'text-zinc-600 group-hover:text-[color:var(--primary)]'
-                    }`}
-                  />
-                </span>
-                {isCustom && (
-                  <span className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-[color:var(--accent-emerald)] text-white shadow-md">
-                    <Sparkles className="size-3 fill-current" />
-                  </span>
-                )}
-              </span>
-              <span
-                className={`mt-2 max-w-[100px] text-center text-xs font-semibold tracking-wide whitespace-nowrap ${
-                  isActive
-                    ? 'text-[color:var(--primary)]'
-                    : isCustom
-                      ? 'text-emerald-700'
-                      : 'text-zinc-600 group-hover:text-zinc-900'
-                }`}
-              >
-                {label}
-              </span>
+            <button key={filter.slug} type="button" onClick={() => onSelect(filter.slug)} aria-pressed={isActive}
+              className={`flex min-h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-xs font-medium transition-colors ${isActive ? 'border-[#25231f] bg-[#25231f] text-white' : 'border-[#ded7cb] bg-transparent text-stone-600 hover:border-[#9b7730] hover:text-stone-950'}`}>
+              <Icon className="size-3.5" strokeWidth={1.5} />{filter.name}
             </button>
           );
         })}

@@ -51,7 +51,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className="min-h-screen bg-zinc-50 font-sans antialiased">
+      <body className="min-h-screen bg-[#faf8f3] font-sans antialiased">
         <Providers>
           <AnnouncementBar />
           <Navbar categories={categories} />
