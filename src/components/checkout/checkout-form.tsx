@@ -54,6 +54,10 @@ export function CheckoutForm() {
 
   const { user, loading: authLoading, profile, addresses, refreshAddresses } = useAuth();
 
+  const [paymentProof, setPaymentProof] = useState<string | null>(null);
+  const [proofName, setProofName] = useState('');
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [proofError, setProofError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
@@ -61,6 +65,7 @@ export function CheckoutForm() {
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [confirmationUrl, setConfirmationUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Address book state (signed-up customers)
@@ -75,16 +80,16 @@ export function CheckoutForm() {
   const [addressError, setAddressError] = useState<string | null>(null);
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
-  const { cod, cardPayment } = STORE_CONFIG.paymentMethods;
+  const { cod } = STORE_CONFIG.paymentMethods;
   const hasCustomizedItems = items.some((item) => item.isCustomized);
   const paymentOptions = useMemo<PaymentOption[]>(
     () =>
       [
         hasCustomizedItems
-          ? cardPayment && {
+          ? {
               id: 'ONLINE_CARD' as const,
-              label: 'Card / Mobile Wallet',
-              description: 'Debit, credit card or mobile wallet online.',
+              label: 'Easypaisa Transfer',
+              description: 'Pay directly and upload your payment screenshot.',
               icon: <CreditCard className="size-4" />,
             }
           : cod && {
@@ -94,7 +99,7 @@ export function CheckoutForm() {
               icon: <Banknote className="size-4" />,
             },
       ].filter(Boolean) as PaymentOption[],
-    [cod, cardPayment, hasCustomizedItems],
+    [cod, hasCustomizedItems],
   );
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('COD');
@@ -223,6 +228,10 @@ export function CheckoutForm() {
       return;
     }
 
+    if (hasCustomizedItems && (!paymentProof || uploadingProof)) {
+      setError('Upload your payment screenshot before placing the order.');
+      return;
+    }
     setSubmitting(true);
     try {
       const result: CreateOrderResult = await createOrder({
@@ -231,6 +240,7 @@ export function CheckoutForm() {
         city,
         address: address.trim(),
         payment_method: paymentMethod,
+        payment_proof: hasCustomizedItems ? paymentProof : null,
         customer_id: user ? (profile?.id ?? null) : null,
         items: items.map((item) => ({
           product_id: item.product.id,
@@ -246,9 +256,9 @@ export function CheckoutForm() {
         return;
       }
 
-      clearCart();
-
       if (result.redirectUrl) {
+        setConfirmationUrl(result.redirectUrl);
+        clearCart();
         router.push(result.redirectUrl);
         return;
       }
@@ -256,6 +266,11 @@ export function CheckoutForm() {
       if (result.requiresPayment && result.gatewayUrl) {
         const res = await fetch(result.gatewayUrl);
         const data = await res.json();
+        if (!res.ok || !data.checkoutUrl) {
+          throw new Error(data.error ?? 'Could not open payment. Please try again.');
+        }
+        setConfirmationUrl(data.checkoutUrl);
+        clearCart();
         router.push(data.checkoutUrl ?? '/');
         return;
       }
@@ -271,6 +286,20 @@ export function CheckoutForm() {
       <div className="grid animate-pulse gap-8 lg:grid-cols-[1fr_24rem]">
         <div className="h-[28rem] rounded-3xl bg-muted" />
         <div className="h-[24rem] rounded-3xl bg-muted" />
+      </div>
+    );
+  }
+
+  if (confirmationUrl || (submitting && items.length === 0)) {
+    return (
+      <div role="status" aria-live="polite" className="mx-auto flex max-w-md flex-col items-center gap-4 rounded-3xl border border-border/60 bg-card px-8 py-16 text-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Opening your order confirmation…</p>
+        {confirmationUrl && (
+          <a href={confirmationUrl} className="text-sm font-medium text-primary underline">
+            Continue to your order
+          </a>
+        )}
       </div>
     );
   }
@@ -559,7 +588,7 @@ export function CheckoutForm() {
           <h2 className="text-base font-semibold">Payment Method</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             {hasCustomizedItems
-              ? 'Orders with customized items are paid online.'
+              ? 'Pay for customized items first, then upload a PNG screenshot. We will verify your payment manually.'
               : 'This order is payable by Cash on Delivery.'}
           </p>
           <div className="mt-4 grid gap-2.5">
@@ -597,6 +626,53 @@ export function CheckoutForm() {
               </button>
             ))}
           </div>
+          {hasCustomizedItems && (
+            <div className="mt-4 space-y-3 rounded-2xl border border-border/60 p-4">
+              <p className="text-sm">Transfer {formatPrice(totalPayable)}, including shipping, to this Easypaisa account, then upload your receipt.</p>
+              <dl className="space-y-2 rounded-xl bg-muted/50 p-4 text-sm">
+                <div>
+                  <dt className="text-xs text-muted-foreground">Account name</dt>
+                  <dd className="font-medium">Shahbaz Hussain Awan</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Easypaisa account number</dt>
+                  <dd className="select-all font-semibold tabular-nums">0311-0268033</dd>
+                </div>
+              </dl>
+              <label htmlFor="payment-proof" className="block text-sm font-medium">Payment screenshot (PNG, up to 5 MB)</label>
+              <Input id="payment-proof" type="file" accept="image/png,.png" disabled={uploadingProof || submitting}
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  setPaymentProof(null);
+                  setProofName('');
+                  setProofError(null);
+                  if (!file) return;
+                  if (file.type !== 'image/png' || file.size === 0 || file.size > 5 * 1024 * 1024) {
+                    setProofError('Choose a PNG screenshot up to 5 MB.');
+                    event.target.value = '';
+                    return;
+                  }
+                  const input = event.target;
+                  setUploadingProof(true);
+                  try {
+                    const form = new FormData();
+                    form.append('file', file);
+                    const response = await fetch('/api/payment-proof', { method: 'POST', body: form });
+                    const data = await response.json();
+                    if (!response.ok || !data.token) throw new Error(data.error ?? 'Upload failed. Please try again.');
+                    setPaymentProof(data.token);
+                    setProofName(file.name);
+                  } catch (error) {
+                    setProofError(error instanceof Error ? error.message : 'Upload failed. Please try again.');
+                    input.value = '';
+                  } finally { setUploadingProof(false); }
+                }} />
+              <p role="status" className="text-xs text-muted-foreground">
+                {uploadingProof ? 'Uploading screenshot…' : paymentProof ? `${proofName} uploaded. You can now place your order.` : 'Upload your screenshot to enable Place Order.'}
+              </p>
+              {proofError && <p role="alert" className="text-xs text-destructive">{proofError}</p>}
+            </div>
+          )}
         </section>
       </div>
 
@@ -661,7 +737,7 @@ export function CheckoutForm() {
           type="submit"
           size="lg"
           className="mt-5 h-12 w-full rounded-xl"
-          disabled={submitting}
+          disabled={submitting || uploadingProof || (hasCustomizedItems && !paymentProof)}
         >
           {submitting ? (
             <>
@@ -671,7 +747,7 @@ export function CheckoutForm() {
           ) : paymentMethod === 'COD' ? (
             'Place COD Order'
           ) : (
-            'Proceed to Payment'
+            'Place Order'
           )}
         </Button>
 

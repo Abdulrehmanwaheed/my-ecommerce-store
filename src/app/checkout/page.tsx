@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, Zap } from 'lucide-react';
 
 import { STORE_CONFIG } from '@/store.config';
 import { CheckoutForm } from '@/components/checkout/checkout-form';
@@ -21,10 +20,6 @@ export default function CheckoutPage() {
             Fast, secure and flexible payment options.
           </p>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card px-3 py-1.5 text-xs text-muted-foreground">
-          <Zap className="size-3.5 text-primary" />
-          Same-day dispatch on orders before 4 PM
-        </span>
       </div>
 
       <CheckoutForm />

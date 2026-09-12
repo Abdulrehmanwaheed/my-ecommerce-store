@@ -31,6 +31,33 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 
+function PaymentProofPreview({ orderId, orderNumber }: { orderId: string; orderNumber: number }) {
+  const [failed, setFailed] = useState(false);
+  const url = `/api/payment-proof?orderId=${encodeURIComponent(orderId)}`;
+
+  return (
+    <div className="mt-3 space-y-3">
+      {failed ? (
+        <p role="status" className="text-xs text-amber-400">
+          Preview could not load. Open the screenshot below to try again.
+        </p>
+      ) : (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+          <img
+            src={url}
+            alt={`Payment screenshot for order #${orderNumber}`}
+            className="max-h-96 w-full rounded-xl border border-zinc-700 bg-zinc-950 object-contain"
+            onError={() => setFailed(true)}
+          />
+        </a>
+      )}
+      <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 underline">
+        Open full-size screenshot <ExternalLink className="size-3" />
+      </a>
+    </div>
+  );
+}
+
 export const ORDER_STATUS_FLOW: OrderStatus[] = [
   'Pending',
   'Processing',
@@ -96,7 +123,7 @@ export function OrderDetailsModal({
       `Hi ${order.customer_name}! Regarding your order #${order.order_number} from ${STORE_CONFIG.brand.name}:`,
       '',
       `Status: ${order.order_status}`,
-      `Total: ${formatPrice(order.total_amount)} (${isCod ? 'Cash on Delivery' : order.payment_method})`,
+      `Total: ${formatPrice(order.total_amount)} (${isCod ? 'Cash on Delivery' : order.notes?.startsWith('Payment screenshot: ') ? 'Manual transfer' : order.payment_method})`,
       '',
       'Items:',
       ...items.map((item) => {
@@ -314,13 +341,30 @@ export function OrderDetailsModal({
                 </span>
               </div>
               <p className="text-[11px] text-zinc-500">
-                {isCod ? 'Cash on Delivery' : order.payment_method}
+                {isCod ? 'Cash on Delivery' : order.notes?.startsWith('Payment screenshot: ') ? 'Manual transfer' : order.payment_method}
+                {order.notes?.startsWith('Payment screenshot: ') && (
+                  <a className="ml-2 text-primary underline" href={`/api/payment-proof?orderId=${order.id}`} target="_blank" rel="noopener noreferrer">
+                    View payment screenshot
+                  </a>
+                )}
                 {order.payment_gateway_ref
                   ? ` · Txn: ${order.payment_gateway_ref}`
                   : ''}
               </p>
             </div>
           </section>
+
+          {order.notes?.startsWith('Payment screenshot: ') && (
+            <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+              <h3 className="text-sm font-semibold text-zinc-100">Payment Screenshot</h3>
+              <p className="mt-1 text-xs text-zinc-400">
+                {order.payment_status === 'Unpaid'
+                  ? 'Awaiting manual payment verification.'
+                  : `Payment status: ${order.payment_status}`}
+              </p>
+              <PaymentProofPreview key={order.id} orderId={order.id} orderNumber={order.order_number} />
+            </section>
+          )}
 
           {/* Status management */}
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">

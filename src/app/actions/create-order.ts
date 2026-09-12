@@ -2,7 +2,8 @@
 
 import { STORE_CONFIG } from '@/store.config';
 import { createClient } from '@/lib/supabase/server';
-import type { CreateOrderInput, Order } from '@/types/database';
+import { PAYMENT_PROOF_PREFIX, verifyPaymentProof } from '@/lib/payment-proof';
+import type { CreateOrderInput } from '@/types/database';
 
 export interface CreateOrderResult {
   success: boolean;
@@ -36,9 +37,7 @@ export async function createOrder(
     if (input.payment_method === 'COD' && !paymentMethods.cod) {
       return { success: false, error: 'Cash on Delivery is currently disabled.' };
     }
-    if (input.payment_method === 'ONLINE_CARD' && !paymentMethods.cardPayment) {
-      return { success: false, error: 'Online card payment is currently disabled.' };
-    }
+
 
     const supabase = await createClient();
 
@@ -102,6 +101,11 @@ export async function createOrder(
       return { success: false, error: 'Online payment is only available for customized items. Please use Cash on Delivery.' };
     }
 
+    const proofPath = hasCustomizedItems && input.payment_proof ? verifyPaymentProof(input.payment_proof) : null;
+    if (hasCustomizedItems && !proofPath) {
+      return { success: false, error: 'Please upload a valid PNG payment screenshot.' };
+    }
+
     const shippingFee = shipping.flatRateFee;
     const totalAmount = subtotal + shippingFee;
 
@@ -152,7 +156,7 @@ export async function createOrder(
         p_total_amount: totalAmount,
         p_shipping_fee: shippingFee,
         p_payment_method: input.payment_method,
-        p_notes: input.notes ?? null,
+        p_notes: proofPath ? `${PAYMENT_PROOF_PREFIX}${proofPath}\n${input.notes ?? ''}` : input.notes ?? null,
         p_items: items,
       });
 
@@ -169,21 +173,11 @@ export async function createOrder(
     }
     const createdOrder = { id: row.p_order_id, order_number: row.p_order_number };
 
-    if (input.payment_method === 'COD') {
-      return {
-        success: true,
-        orderId: createdOrder.id,
-        orderNumber: createdOrder.order_number,
-        redirectUrl: `/order-success/${createdOrder.id}`,
-      };
-    }
-
     return {
       success: true,
       orderId: createdOrder.id,
       orderNumber: createdOrder.order_number,
-      requiresPayment: true,
-      gatewayUrl: `/api/payments/initiate?orderId=${createdOrder.id}`,
+      redirectUrl: `/order-success/${createdOrder.id}`,
     };
   } catch (error) {
     console.error('[create-order] Order creation failed:', error);

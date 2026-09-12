@@ -77,8 +77,10 @@ export default async function OrderSuccessPage({
           Order Confirmed
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Thank you, {order.customer_name.split(' ')[0]}! We are preparing your
-          order for dispatch.
+          Thank you, {order.customer_name.split(' ')[0]}!{' '}
+          {order.notes?.startsWith('Payment screenshot: ') && order.payment_status === 'Unpaid'
+            ? 'Your screenshot was received. Your order is awaiting payment verification.'
+            : 'We are preparing your order for dispatch.'}
         </p>
       </div>
 

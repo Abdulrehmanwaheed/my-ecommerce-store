@@ -19,6 +19,7 @@ import type { NavCategory } from '@/components/layout/Navbar';
 const TRUST_ITEMS = [
   { icon: Truck, label: 'Fast Nationwide Shipping' },
   { icon: ShieldCheck, label: '100% Original Products' },
+  { icon: null, label: '0311-0268033' },
 ];
 
 const SOCIALS = [
@@ -44,7 +45,7 @@ export function Footer({ categories }: { categories: NavCategory[] }) {
                 key={`${item.label}-${index}`}
                 className="flex shrink-0 items-center gap-2 text-xs font-medium tracking-wide text-zinc-400"
               >
-                <item.icon className="size-4 text-emerald-500" />
+                {item.icon && <item.icon className="size-4 text-emerald-500" />}
                 {item.label}
               </span>
             ))}
@@ -67,9 +68,7 @@ export function Footer({ categories }: { categories: NavCategory[] }) {
             />
           </Link>
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-500">
-            {STORE_CONFIG.brand.tagline}. Flat{' '}
-            {STORE_CONFIG.region.currencySymbol}{' '}
-            {STORE_CONFIG.shipping.flatRateFee} delivery nationwide.
+            {STORE_CONFIG.brand.tagline}.
           </p>
           <div className="mt-4 space-y-1.5 text-sm">
             <a

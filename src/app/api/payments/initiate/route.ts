@@ -11,6 +11,7 @@ interface OrderForInitiate {
   total_amount: number;
   payment_method: string;
   payment_status: string;
+  notes: string | null;
 }
 
 async function handleInitiate(orderId: string | null) {
@@ -27,7 +28,7 @@ async function handleInitiate(orderId: string | null) {
   const { data: order, error } = await supabase
     .from('orders')
     .select(
-      'id, order_number, customer_name, phone_whatsapp, total_amount, payment_method, payment_status',
+      'id, order_number, customer_name, phone_whatsapp, total_amount, payment_method, payment_status, notes',
     )
     .eq('id', orderId)
     .maybeSingle<OrderForInitiate>();
@@ -37,6 +38,10 @@ async function handleInitiate(orderId: string | null) {
       { success: false, error: 'Order not found' },
       { status: 404 },
     );
+  }
+
+  if (order.notes?.startsWith('Payment screenshot: ')) {
+    return NextResponse.json({ error: 'This payment requires manual verification.' }, { status: 400 });
   }
 
   if (order.payment_method === 'COD') {

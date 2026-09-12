@@ -98,6 +98,7 @@ export interface CartItemInput {
 }
 
 export interface CreateOrderInput {
+  payment_proof?: string | null;
   customer_name: string;
   phone_whatsapp: string;
   city?: string | null;

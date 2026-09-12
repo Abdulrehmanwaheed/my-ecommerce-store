@@ -42,6 +42,12 @@ export async function processWebhook(rawPayload: string): Promise<WebhookProcess
     };
   }
 
+  const { data: order, error: orderError } = await supabase.from('orders').select('notes').eq('id', orderId).single();
+  if (orderError || !order) return { ok: false, status: 'bad_request', message: 'Order unavailable' };
+  if (order.notes?.startsWith('Payment screenshot: ')) {
+    return { ok: false, status: 'bad_request', message: 'This payment requires manual verification.' };
+  }
+
   if (verification.status === 'success' && verification.transactionId) {
     const { data, error } = await supabase
       .from('orders')
