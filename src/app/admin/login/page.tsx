@@ -71,6 +71,7 @@ export default function AdminLoginPage() {
               </label>
               <Input
                 type="email"
+                className="text-white caret-white placeholder:text-zinc-400"
                 autoComplete="email"
                 placeholder="owner@example.com"
                 value={email}
@@ -84,6 +85,7 @@ export default function AdminLoginPage() {
               </label>
               <Input
                 type="password"
+                className="text-white caret-white placeholder:text-zinc-400"
                 autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
