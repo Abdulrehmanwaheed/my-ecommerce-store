@@ -6,10 +6,8 @@ import {
   CheckCircle2,
   CreditCard,
   Flame,
-  MessagesSquare,
   Package,
   ShieldCheck,
-  Star,
   Truck,
 } from 'lucide-react';
 
@@ -20,15 +18,8 @@ import {
   fetchProducts,
 } from '@/lib/backend-demo';
 import { formatPrice } from '@/lib/format';
-import type { Product } from '@/types/database';
 
 import { Badge } from '@/components/ui/badge';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
 import { ImageViewer } from '@/components/product/image-viewer';
 import { BuyActions } from '@/components/product/buy-actions';
 import { CustomizationOptions } from '@/components/product/customization-options';
@@ -96,13 +87,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   const hasDescription = Boolean(product.description?.trim());
   const hasSpecs = specs.length > 0;
-  // Reviews are placeholder-only for now (no reviews system yet), so hide the
-  // empty reviews box until real review data is available.
-  const hasReviews = false;
-
-  const whatsappUrl = `https://wa.me/${STORE_CONFIG.whatsapp.phoneNumber}?text=${encodeURIComponent(
-    `Hello ${STORE_CONFIG.brand.name}! I ordered *${product.title}* and would like to leave a review.`,
-  )}`;
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -233,97 +217,80 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </div>
       </div>
 
-      {/* Bottom tabs — only render tabs that have real content */}
-      {(hasDescription || hasSpecs || hasReviews) && (
-        <div className="mt-12">
-          <Tabs defaultValue={hasDescription ? 'description' : hasSpecs ? 'specs' : 'reviews'}>
-            <TabsList className="w-full justify-start rounded-2xl border border-zinc-200 bg-white p-1 shadow-sm sm:w-fit">
-              {hasDescription && (
-                <TabsTrigger value="description">Description &amp; Details</TabsTrigger>
-              )}
-              {hasSpecs && <TabsTrigger value="specs">Specifications</TabsTrigger>}
-              {hasReviews && <TabsTrigger value="reviews">Reviews</TabsTrigger>}
-            </TabsList>
+      {/* Product information */}
+      <section aria-labelledby="product-details-heading" className="mt-12 border-t border-[#ded7cb] pt-8 sm:mt-16 sm:pt-10">
+        <p className="brand-eyebrow uppercase">A closer look</p>
+        <h2 id="product-details-heading" className="brand-display mt-3 text-3xl tracking-tight sm:text-4xl">
+          The finer details
+        </h2>
 
+        <div className="mt-7 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-14">
+          <div className="min-w-0">
             {hasDescription && (
-              <TabsContent
-                value="description"
-                className="mt-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
-              >
-                <h2 className="text-lg font-bold text-zinc-900">
-                  About this product
-                </h2>
-                <p className="mt-3 text-sm leading-relaxed text-zinc-600">
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-[#785a20]">
+                  About this piece
+                </h3>
+                <p className="mt-4 max-w-3xl whitespace-pre-line text-sm leading-7 text-[#625c52] sm:text-base sm:leading-8">
                   {product.description}
                 </p>
-                <p className="mt-3 text-sm leading-relaxed text-zinc-600">
-                  We ship to {STORE_CONFIG.shipping.cities.slice(0, 9).join(', ')}{' '}
-                  and all major cities across Pakistan. Delivery is a flat{' '}
-                  {formatPrice(STORE_CONFIG.shipping.flatRateFee)} nationwide.
-                </p>
-              </TabsContent>
+              </div>
             )}
 
             {hasSpecs && (
-              <TabsContent
-                value="specs"
-                className="mt-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
-              >
-                <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+              <div className={hasDescription ? 'mt-8' : ''}>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-[#785a20]">
+                  Product details
+                </h3>
+                <dl className="mt-4 grid gap-x-8 sm:grid-cols-2">
                   {specs.map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="flex items-baseline justify-between gap-4 border-b border-zinc-100 pb-2"
-                    >
-                      <dt className="text-sm text-zinc-500">{prettyKey(key)}</dt>
-                      <dd className="text-right text-sm font-medium text-zinc-900">
+                    <div key={key} className="flex items-baseline justify-between gap-5 border-b border-[#e5ded2] py-3.5 text-sm">
+                      <dt className="text-[#756d60]">{prettyKey(key)}</dt>
+                      <dd className="min-w-0 break-words text-right font-medium text-[#25231f]">
                         {prettyValue(value)}
                       </dd>
                     </div>
                   ))}
                 </dl>
-              </TabsContent>
+              </div>
             )}
 
-            {hasReviews && (
-              <TabsContent
-                value="reviews"
-                className="mt-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
-              >
-                <div className="flex flex-wrap items-center gap-6">
-                  <div className="text-center">
-                    <p className="text-5xl font-extrabold text-zinc-900">4.9</p>
-                    <p className="mt-1 flex items-center justify-center gap-0.5 text-amber-500">
-                      {Array.from({ length: 5 }).map((_, index) => (
-                        <Star key={index} className="size-4 fill-current" />
-                      ))}
-                    </p>
-                    <p className="mt-1 text-xs text-zinc-500">214 verified reviews</p>
-                  </div>
-                  <div className="flex-1 text-sm text-zinc-600">
-                    <p className="font-medium text-zinc-900">
-                      Loved by customers across Pakistan
-                    </p>
-                    <p className="mt-1">
-                      Written reviews load on this template. Share your experience
-                      with us on WhatsApp when your order arrives.
-                    </p>
-                    <a
-                      href={whatsappUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[#8a692e] hover:text-emerald-700"
-                    >
-                      <MessagesSquare className="size-4" />
-                      Leave a review on WhatsApp
-                    </a>
-                  </div>
-                </div>
-              </TabsContent>
+            {!hasDescription && !hasSpecs && (
+              <p className="text-sm leading-7 text-[#625c52]">
+                Have a question about this piece? Get in touch and we’ll help you with the details.
+              </p>
             )}
-          </Tabs>
+          </div>
+
+          <aside aria-label="Delivery information" className="self-start border border-[#e5ded2] bg-[#f2ede4] p-6 sm:p-7">
+            <div className="flex items-center gap-3">
+              <Truck aria-hidden="true" className="size-5 text-[#8a692e]" />
+              <h3 className="brand-display text-2xl">Delivered to your door</h3>
+            </div>
+            <div className="mt-5 flex items-baseline justify-between gap-4 border-b border-[#ded7cb] pb-4">
+              <span className="text-sm text-[#625c52]">Nationwide delivery</span>
+              <span className="text-lg font-semibold text-[#785a20]">
+                {formatPrice(STORE_CONFIG.shipping.flatRateFee)}
+              </span>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-[#625c52]">
+              We deliver to {STORE_CONFIG.shipping.cities.slice(0, 3).join(', ')} and all major cities across Pakistan.
+            </p>
+            <div className="mt-5 flex items-center gap-2 text-xs font-medium text-[#625c52]">
+              <CreditCard aria-hidden="true" className="size-4 shrink-0 text-[#8a692e]" />
+              {product.allow_customization ? 'Payment via Easypaisa transfer' : 'Cash on delivery available'}
+            </div>
+            <a
+              href={`https://wa.me/${STORE_CONFIG.whatsapp.phoneNumber}?text=${encodeURIComponent(`Hello! I have a question about ${product.title}.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex border-b border-[#99752e]/40 pb-1 text-sm font-medium text-[#785a20] transition-colors hover:border-[#785a20] hover:text-[#25231f]"
+            >
+              Questions? Chat with us ↗
+            </a>
+          </aside>
         </div>
-      )}
+      </section>
 
       {/* Related products */}
       {related.length > 0 && (
